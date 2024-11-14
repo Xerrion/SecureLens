@@ -16,7 +16,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: '8.0.x'  # Opdateret til .NET 8.0
+          dotnet-version: '8.0.x'  
 
       - name: Restore dependencies
         run: dotnet restore
@@ -34,10 +34,10 @@ jobs:
         run: snyk auth ${{ secrets.SNYK }}
 
       - name: Snyk Code Analysis (SAST)
-        run: snyk code test
-
+        run: snyk code test SecureLens.sln
+    
       - name: Snyk Dependency Analysis (SCA)
-        run: snyk test
+        run: snyk test SecureLens.sln
 
       - name: Upload Test Results
         uses: actions/upload-artifact@v3
