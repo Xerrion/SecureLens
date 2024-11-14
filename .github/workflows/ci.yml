@@ -16,7 +16,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '8.0.x'  # Opdateret til .NET 8.0
 
       - name: Restore dependencies
         run: dotnet restore
@@ -25,7 +25,7 @@ jobs:
         run: dotnet build --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test --no-build --verbosity normal --logger "trx;LogFileName=test_results.trx"
+        run: dotnet test --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test_results.trx"
 
       - name: Install Snyk CLI
         run: npm install -g snyk
@@ -43,4 +43,4 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: test-results
-          path: SecureLens.Tests/bin/Debug/net8.0/test_results.trx
+          path: SecureLens.Tests/bin/Release/net8.0/test_results.trx
