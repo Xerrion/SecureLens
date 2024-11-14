@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureLens", "SecureLens\SecureLens.csproj", "{439733A1-4599-41C7-8478-3C8DEEBA9C85}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureLens.Tests", "SecureLens.Tests\SecureLens.Tests.csproj", "{B4A92640-EBC4-4C60-AD1C-8CC82B9CA6E1}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{439733A1-4599-41C7-8478-3C8DEEBA9C85}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{439733A1-4599-41C7-8478-3C8DEEBA9C85}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{439733A1-4599-41C7-8478-3C8DEEBA9C85}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{439733A1-4599-41C7-8478-3C8DEEBA9C85}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B4A92640-EBC4-4C60-AD1C-8CC82B9CA6E1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B4A92640-EBC4-4C60-AD1C-8CC82B9CA6E1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B4A92640-EBC4-4C60-AD1C-8CC82B9CA6E1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B4A92640-EBC4-4C60-AD1C-8CC82B9CA6E1}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
