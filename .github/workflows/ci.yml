@@ -34,7 +34,7 @@ jobs:
         run: snyk auth ${{ secrets.SNYK }}
 
       - name: Snyk Code Analysis (SAST)
-        run: snyk code test SecureLens.sln
+        run: snyk code test
     
       - name: Snyk Dependency Analysis (SCA)
         run: snyk test SecureLens.sln
