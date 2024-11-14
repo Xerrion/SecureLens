@@ -16,9 +16,24 @@ jobs:
         uses: actions/setup-dotnet@v1
         with:
           dotnet-version: '6.0.x'
+    
       - name: Restore dependencies
         run: dotnet restore
+        
       - name: Build
         run: dotnet build --configuration Release --no-restore
+        
       - name: Test
         run: dotnet test --no-build --verbosity normal
+        
+      - name: Install Snyk CLI
+        run: npm install -g snyk
+        
+      - name: Authenticate Snyk
+        run: snyk auth ${{ secrets.SNYK }}
+        
+      - name: Snyk Code Analysis (SAST)
+        run: snyk code test
+        
+      - name: Snyk Dependency Analysis (SCA)
+        run: snyk test
