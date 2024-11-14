@@ -37,7 +37,7 @@ jobs:
         run: snyk code test
     
       - name: Snyk Dependency Analysis (SCA)
-        run: snyk test SecureLens.sln
+        run: snyk test --file=SecureLens.sln
 
       - name: Upload Test Results
         uses: actions/upload-artifact@v3
