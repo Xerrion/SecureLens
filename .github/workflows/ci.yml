@@ -2,9 +2,9 @@
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
 
 jobs:
   build:
@@ -12,28 +12,35 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+
       - name: Setup .NET
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: '6.0.x'
-    
+          dotnet-version: '8.0.x'  
+
       - name: Restore dependencies
         run: dotnet restore
-        
+
       - name: Build
         run: dotnet build --configuration Release --no-restore
-        
+
       - name: Test
-        run: dotnet test --no-build --verbosity normal
-        
+        run: dotnet test --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test_results.trx"
+
       - name: Install Snyk CLI
         run: npm install -g snyk
-        
+
       - name: Authenticate Snyk
         run: snyk auth ${{ secrets.SNYK }}
-        
+
       - name: Snyk Code Analysis (SAST)
         run: snyk code test
-        
+    
       - name: Snyk Dependency Analysis (SCA)
-        run: snyk test
+        run: snyk test --file=SecureLens.sln
+
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: SecureLens.Tests/bin/Release/net8.0/test_results.trx
