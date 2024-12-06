@@ -8,7 +8,7 @@ namespace SecureLens.Tests
         public void TestContainsSecure_ShouldReturnTrue_WhenInputIsSecure()
         {
             // Arrange
-            var input = "This is secure.";
+            var input = "This is secure!";
 
             // Act
             var result = SecureLens.StringOperations.ContainsSecure(input);
