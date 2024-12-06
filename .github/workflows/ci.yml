@@ -60,8 +60,8 @@ jobs:
         run: az account set --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         
       - name: Terraform Init
-        run: terraform init
-        
+        run: terraform -chdir=./infrastructure init
+
       - name: Terraform Plan & Apply
         env:
           TF_VAR_admin_username: ${{ secrets.TERRAFORM_ADMIN_USERNAME }}
@@ -77,7 +77,6 @@ jobs:
           TF_VAR_user_password: ${{ secrets.TERRAFORM_TEST_PASSWORD }}
           TF_VAR_group_name: ${{ secrets.TERRAFORM_GROUP_NAME }}
         run: |
-          terraform plan
-          terraform apply -auto-approve
-      
+          terraform -chdir=./infrastructure plan
+          terraform -chdir=./infrastructure apply -auto-approve
       
