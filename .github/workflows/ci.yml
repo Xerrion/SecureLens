@@ -16,7 +16,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: '8.0.x'  
+          dotnet-version: '8.0.x'
 
       - name: Restore dependencies
         run: dotnet restore
@@ -35,7 +35,7 @@ jobs:
 
       - name: Snyk Code Analysis (SAST)
         run: snyk code test
-    
+
       - name: Snyk Dependency Analysis (SCA)
         run: snyk test --file=SecureLens.sln
 
@@ -44,8 +44,7 @@ jobs:
         with:
           name: test-results
           path: SecureLens.Tests/bin/Release/net8.0/test_results.trx
-            
-    
+
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v2
 
@@ -54,13 +53,18 @@ jobs:
           AZURE_USERNAME: ${{ secrets.AZURE_USERNAME }}
           AZURE_PASSWORD: ${{ secrets.AZURE_PASSWORD }}
         run: az login -u "$AZURE_USERNAME" -p "$AZURE_PASSWORD"
-      
-      
+
       - name: Set Azure Subscription
         run: az account set --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-        
+
       - name: Terraform Init
         run: terraform -chdir=./infrastructure init
+
+      # Terraform Import Step
+      # This imports the existing resource group into Terraform's state.
+      # If you haven't configured a remote backend, the state will be local to the CI runner.
+      - name: Terraform Import Resource Group
+        run: terraform -chdir=./infrastructure import azurerm_resource_group.staging_rg "/subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/staging-environment-rg"
 
       - name: Terraform Plan & Apply
         env:
@@ -79,4 +83,3 @@ jobs:
         run: |
           terraform -chdir=./infrastructure plan
           terraform -chdir=./infrastructure apply -auto-approve
-      
