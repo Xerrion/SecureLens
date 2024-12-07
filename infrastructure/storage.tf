@@ -69,7 +69,6 @@ resource "azurerm_storage_blob" "launch_elevated_ps1" {
   source                 = "${path.module}/LaunchElevated.ps1"
 }
 
-
 data "azurerm_storage_account_sas" "scripts_sas" {
   connection_string = azurerm_storage_account.script_storage.primary_connection_string
 
