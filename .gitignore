@@ -72,7 +72,5 @@ packages/
 *.tfstate.backup
 terraform.tfvars
 
-MockData/ad_cache_anonymized_updated.json
-MockData/ad_cache_anonymized.json
-MockData/users_updated.json
+MockData/*
 
