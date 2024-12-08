@@ -2,10 +2,16 @@
 
 public class AdminByRequestClient
 {
-    private string BaseUrl { get; }
+    private string BaseUrlAudit
+    private string BaseUrlInventory
+    private string ApiKey
+    private Dictionary<string, string> Headers
     private string Startdate 
     private string Enddate
     private string Status
+    private string Take
+    private boolean WantsScanDetails
+    private string Type
     
     public AdminByRequestClient(string baseUrl, string apiKey)
     {
@@ -15,13 +21,7 @@ public class AdminByRequestClient
 
     public List<string> fetchInventoryData()
     {
-        var client = new RestClient(BaseUrl);
-        var request = new RestRequest("inventory", Method.GET);
-        request.AddHeader("Authorization", "Bearer " + ApiKey);
-        var response = client.Execute(request);
-        var content = response.Content;
-        var inventory = JsonConvert.DeserializeObject<List<string>>(content);
-        return inventory;
+        
     }
     
 }
