@@ -12,7 +12,7 @@ public class AdminByRequestClient
     private readonly string Status;
     private readonly string Take;
     private readonly bool WantsScanDetails;
-    private readonly string Type;asdsad 
+    private readonly string Type;
     
     public AdminByRequestClient(string baseUrl, string apiKey)
     {
