@@ -2,16 +2,17 @@
 
 public class AdminByRequestClient
 {
-    private string BaseUrlAudit
-    private string BaseUrlInventory = "https://dc1api.adminbyrequest.com/inventory"
-    private string ApiKey
-    private Dictionary<string, string> Headers
-    private string Startdate 
-    private string Enddate
-    private string Status
-    private string Take
-    private boolean WantsScanDetails
-    private string Type
+    private static readonly HttpClient client = new HttpClient();
+    private readonly string BaseUrlAudit;
+    private readonly string BaseUrlInventory = "https://dc1api.adminbyrequest.com/inventory";
+    private readonly string ApiKey;
+    private readonly Dictionary<string, string> Headers;
+    private readonly string StartDate;
+    private readonly string EndDate;
+    private readonly string Status;
+    private readonly string Take;
+    private readonly bool WantsScanDetails;
+    private readonly string Type;asdsad 
     
     public AdminByRequestClient(string baseUrl, string apiKey)
     {
@@ -26,7 +27,7 @@ public class AdminByRequestClient
 
     public List<string> fetchInventoryData()
     {
-        
+        var re
     }
     
 }
