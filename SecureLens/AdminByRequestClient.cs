@@ -3,7 +3,7 @@
 public class AdminByRequestClient
 {
     private string BaseUrlAudit
-    private string BaseUrlInventory
+    private string BaseUrlInventory = "https://dc1api.adminbyrequest.com/inventory"
     private string ApiKey
     private Dictionary<string, string> Headers
     private string Startdate 
@@ -17,6 +17,11 @@ public class AdminByRequestClient
     {
         BaseUrl = baseUrl;
         ApiKey = apiKey;
+        Startdate = DateTime.Now.AddDays(-30).ToString("yyyy-MM-dd");
+        Enddate = DateTime.Now.ToString("yyyy-MM-dd");
+        Status = "Finished";
+        Take = "100";
+        WantsScanDetails = true;
     }
 
     public List<string> fetchInventoryData()
