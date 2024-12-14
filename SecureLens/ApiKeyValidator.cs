@@ -5,16 +5,16 @@ namespace DefaultNamespace
 {
     public static class ApiKeyValidator
     {
-        // Define the regex pattern for the API key
+        // Definer regex-mønstret for API-nøglen med case-insensitive indstillinger
         private static readonly Regex ApiKeyPattern = new Regex(
             @"^[A-Z0-9]{8}(-[A-Z0-9]{4}){3}-[A-Z0-9]{12}$",
-            RegexOptions.Compiled);
+            RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         /// <summary>
-        /// Validates the API key format.
+        /// Validerer API-nøgleformatet.
         /// </summary>
-        /// <param name="apiKey">The API key string to validate.</param>
-        /// <returns>True if valid; otherwise, false.</returns>
+        /// <param name="apiKey">API-nøglestrengen, der skal valideres.</param>
+        /// <returns>True hvis gyldig; ellers, false.</returns>
         public static bool IsValid(string apiKey)
         {
             if (string.IsNullOrEmpty(apiKey))
