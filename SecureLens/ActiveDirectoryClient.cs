@@ -10,16 +10,12 @@ namespace SecureLens
 {
     public class ActiveDirectoryClient
     {
-        // Her gemmes caching-data i to dictionaries:
-        // 1) groupCache: groupName -> liste af userIDs
-        // 2) userCache:  userID    -> AdUser-model
+        // groupCache: groupName -> list of userIDs (like "user0824", "user0192", etc)
         private Dictionary<string, List<string>> groupCache = null;
-        private Dictionary<string, ActiveDirectoryUser> userCache = null;
 
-        /// <summary>
-        /// Loader data fra en JSON-fil, der indeholder AD-grupper (ad_group_cache).
-        /// Formatet er: { "Journalism": ["user0001", ...], "Graphical Designer": ["user0001", ...], ... }
-        /// </summary>
+        // userCache: userID -> ActiveDirectoryUser (the "mapped" final object)
+        private Dictionary<string, ActiveDirectoryUser> userCache = null;
+        
         public void LoadCachedGroupData(string filePath)
         {
             try
@@ -33,11 +29,13 @@ namespace SecureLens
                 }
 
                 string json = File.ReadAllText(filePath);
-                // Her parser vi JSON-strukturen direkte til en Dictionary<string,List<string>>.
                 groupCache = JsonSerializer.Deserialize<Dictionary<string, List<string>>>(json);
-
+                
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine($"Loading cached Active Directory groups from {filePath}");
+                Console.ResetColor();
                 Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"Loaded group cache from {filePath}. Groups found: {groupCache?.Count ?? 0}.");
+                Console.WriteLine($"Loaded {groupCache?.Count ?? 0} Active Directory groups");
                 Console.ResetColor();
             }
             catch (Exception ex)
@@ -47,16 +45,7 @@ namespace SecureLens
                 Console.ResetColor();
             }
         }
-
-        /// <summary>
-        /// Loader data fra en JSON-fil, der indeholder AD-cache (ad_cache).
-        /// Formatet er:
-        /// {
-        ///    "user0824": { "Title":"Anonymous","Department":"Anonymous",...,"Groups":{...} },
-        ///    "user0192": { "Title":"Anonymous",...},
-        ///    ...
-        /// }
-        /// </summary>
+        
         public void LoadCachedAdData(string filePath)
         {
             try
@@ -70,11 +59,54 @@ namespace SecureLens
                 }
 
                 string json = File.ReadAllText(filePath);
-                // Bemærk: Vi bruger vores AdUser-model, hvor brugernavne er keys i en dictionary.
-                userCache = JsonSerializer.Deserialize<Dictionary<string, ActiveDirectoryUser>>(json);
 
+                // First parse into a dictionary: userID -> RawActiveDirectoryUser
+                var rawDictionary = JsonSerializer.Deserialize<Dictionary<string, RawActiveDirectoryUser>>(json);
+                if (rawDictionary == null)
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine($"Failed to parse AD user cache from {filePath} (null result).");
+                    Console.ResetColor();
+                    return;
+                }
+
+                // Now map them to the final userCache: userID -> ActiveDirectoryUser
+                userCache = new Dictionary<string, ActiveDirectoryUser>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var kvp in rawDictionary)
+                {
+                    string userId = kvp.Key;  // e.g. "user0824"
+                    RawActiveDirectoryUser raw = kvp.Value;
+                    
+                    var mappedUser = new ActiveDirectoryUser
+                    {
+                        Title = raw.Title,
+                        Department = raw.Department,
+                        DistinguishedName = raw.DistinguishedName,
+                        Created = raw.Created,
+                        Groups = new List<ActiveDirectoryGroup>()
+                    };
+
+                    // For each group name in raw.Groups, create an ActiveDirectoryGroup object
+                    if (raw.Groups != null)
+                    {
+                        foreach (var g in raw.Groups)
+                        {
+                            mappedUser.Groups.Add(new ActiveDirectoryGroup
+                            {
+                                Name = g
+                            });
+                        }
+                    }
+
+                    userCache[userId] = mappedUser;
+                }
+
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine($"Loading cached Active Directory users from {filePath}");
+                Console.ResetColor();
                 Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"Loaded AD user cache from {filePath}. Users found: {userCache?.Count ?? 0}.");
+                Console.WriteLine($"Loaded {userCache.Count} Active Directory users");
                 Console.ResetColor();
             }
             catch (Exception ex)
@@ -84,13 +116,7 @@ namespace SecureLens
                 Console.ResetColor();
             }
         }
-
-        /// <summary>
-        /// Slår en gruppe op i cached group data (ad_group_cache), 
-        /// returnerer en liste af brugernavne fra cachen - i stedet for at kalde AD.
-        /// </summary>
-        /// <param name="groupName">Navnet på gruppen.</param>
-        /// <returns>Liste af userIDs for den gruppe, hvis den findes.</returns>
+        
         public List<string> QueryAdGroupFromCache(string groupName)
         {
             if (groupCache == null)
@@ -116,12 +142,7 @@ namespace SecureLens
                 return new List<string>();
             }
         }
-
-        /// <summary>
-        /// Samler alle medlemmer fra en liste af grupper - men ved brug af cached data.
-        /// </summary>
-        /// <param name="groupNames">Liste af gruppenavne.</param>
-        /// <returns>Sæt af alle medlemmer fundet i disse grupper.</returns>
+        
         public HashSet<string> CollectAdGroupMembersFromCache(IEnumerable<string> groupNames)
         {
             if (groupCache == null)
@@ -167,10 +188,9 @@ namespace SecureLens
         }
 
         /// <summary>
-        /// Henter en bruger fra cachen ud fra userID (f.eks. "user0192").
+        /// Returns an ActiveDirectoryUser from our "userCache" dictionary, if it exists.
+        /// e.g. "user0192" -> AD user object with Title, Department, Groups, etc.
         /// </summary>
-        /// <param name="userId">UserID der ønskes slået op.</param>
-        /// <returns>Et AdUser-objekt hvis det findes i cachen, ellers null.</returns>
         public ActiveDirectoryUser GetAdUserFromCache(string userId)
         {
             if (userCache == null)
@@ -185,12 +205,17 @@ namespace SecureLens
             {
                 return adUser;
             }
-            return null;
+            else
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"[CACHE] User '{userId}' not found in AD cache.");
+                Console.ResetColor();
+                return null;
+            }
         }
 
         // --------------------------------------------------------------------------------
-        // Herunder dine eksisterende metoder, der reelt kalder AD via PowerShell.
-        // (uændret)
+        // Below: Live AD query methods using PowerShell.
         // --------------------------------------------------------------------------------
 
         /// <summary>
@@ -302,5 +327,21 @@ Get-ADGroupMember -Identity ""{groupName}"" -Recursive | Select-Object -ExpandPr
 
             return allMembers;
         }
+    }
+
+    /// <summary>
+    /// A small helper class to parse the JSON from "cached_admember_queries.json"
+    /// that has Groups as a List<string>. 
+    /// We'll map this "Raw" user to the final ActiveDirectoryUser after parsing.
+    /// </summary>
+    internal class RawActiveDirectoryUser
+    {
+        public string Title { get; set; }
+        public string Department { get; set; }
+        public string DistinguishedName { get; set; }
+        public DateTime Created { get; set; }
+
+        // The JSON has "Groups": [...strings...]
+        public List<string> Groups { get; set; }
     }
 }

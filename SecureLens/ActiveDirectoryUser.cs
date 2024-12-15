@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text.Json.Serialization;
 
 namespace SecureLens
 {
@@ -10,7 +9,7 @@ namespace SecureLens
         public string Department { get; set; }
         public string DistinguishedName { get; set; }
         public DateTime Created { get; set; }
-
+        // This was originally List<ActiveDirectoryGroup> Groups
         public List<ActiveDirectoryGroup> Groups { get; set; }
     }
 }

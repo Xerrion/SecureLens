@@ -1,12 +1,13 @@
-﻿namespace SecureLens;
-
-public class ActiveDirectoryGroup
+﻿namespace SecureLens
 {
-    public string Name { get; set; }
-    public List<ActiveDirectoryUser> Users { get; set; }
-    
-    public ActiveDirectoryGroup()
+    public class ActiveDirectoryGroup
     {
-        Users = new List<ActiveDirectoryUser>();
+        public string Name { get; set; }
+        public List<ActiveDirectoryUser> Users { get; set; }
+
+        public ActiveDirectoryGroup()
+        {
+            Users = new List<ActiveDirectoryUser>();
+        }
     }
 }
