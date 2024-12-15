@@ -16,8 +16,6 @@
                         Email = "john.doe@example.com",
                         Phone = "123-456-7890"
                     },
-                    ApprovedBy = "Admin User",
-                    DeniedBy = "Admin Denier"
                 }
             };
 
