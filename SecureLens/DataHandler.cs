@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using SecureLens;
-
-namespace SecureLens
+﻿namespace SecureLens
 {
     /// <summary>
     /// DataHandler merges all data sources (AuditLogs, InventoryLogs, and AD data) 
@@ -14,7 +10,7 @@ namespace SecureLens
         private readonly List<InventoryLogEntry> _inventoryLogs;
         private readonly ActiveDirectoryClient _adClient;
 
-        // Dictionary of CompletedUser objects keyed by normalized user account (e.g. "user0192").
+        // Dictionary of CompletedUser objects keyed by normalized user account
         private readonly Dictionary<string, CompletedUser> _completedUsers;
 
         public DataHandler(
@@ -35,10 +31,6 @@ namespace SecureLens
         /// <returns>A list of CompletedUser objects.</returns>
         public List<CompletedUser> BuildCompletedUsers()
         {
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine("Building Completed Users to prepare analysis...");
-            Console.ResetColor();
-
             // 1) Process Audit Logs
             foreach (var auditEntry in _auditLogs)
             {
@@ -74,7 +66,6 @@ namespace SecureLens
             }
 
             // 3) Attach AD data if _adClient is available
-            //    For AD, we also use the normalized account key to look up the user.
             if (_adClient != null)
             {
                 foreach (var kvp in _completedUsers)
@@ -87,13 +78,11 @@ namespace SecureLens
                     }
                 }
             }
-
-            Console.WriteLine($"Built {_completedUsers.Count} Completed Users.");
             return new List<CompletedUser>(_completedUsers.Values);
         }
 
         /// <summary>
-        /// Strips any "DOMAIN\" prefix from the user account so we consistently store "user0192" as the key.
+        /// Strips any "DOMAIN\" prefix from the user account for consistency
         /// </summary>
         private string NormalizeUserAccount(string rawAccount)
         {

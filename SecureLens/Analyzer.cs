@@ -1,13 +1,21 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-
-namespace SecureLens
+﻿namespace SecureLens
 {
     public class Analyzer
     {
         private readonly List<CompletedUser> _completedUsers;
         private readonly List<AdminByRequestSetting> _settings;
+
+        // You can adapt these to your actual recognized terminal apps, 
+        // ensuring the string values match how they're logged in your environment:
+        private static readonly HashSet<string> KnownTerminalApps = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "cmd.exe",
+            "PowerShell",
+            "Windows Command Processor",
+            "windows powershell ise",
+            "windows subsystem for linux",
+            "git for windows"
+        };
 
         public Analyzer(List<CompletedUser> completedUsers, List<AdminByRequestSetting> settings)
         {
@@ -37,9 +45,6 @@ namespace SecureLens
             public int GlobalCount { get; set; }
         }
 
-        /// <summary>
-        /// For "Unused AD Groups": which group, which setting, how many members.
-        /// </summary>
         public class UnusedAdGroupResult
         {
             public string ADGroup { get; set; }
@@ -47,9 +52,25 @@ namespace SecureLens
             public int NumberOfUsers { get; set; }
         }
 
+        /// <summary>
+        /// Row structure for the final "Terminal Statistics" table.
+        /// Matches your Python PoC output columns.
+        /// </summary>
+        public class TerminalStatisticsRow
+        {
+            public string User { get; set; }
+            public string Applications { get; set; }
+            public int Count { get; set; }
+            public string Department { get; set; }
+            public string Title { get; set; }
+            public string SettingsUsed { get; set; }
+            public string Types { get; set; }
+            public string SourceADGroups { get; set; }
+        }
+
         #endregion
 
-        #region OverallStatistics (existing logic)
+        #region OverallStatistics
 
         public OverallStatisticsResult ComputeOverallStatistics()
         {
@@ -60,10 +81,10 @@ namespace SecureLens
                 TitlesUnderSetting = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase)
             };
 
-            // 1) total unique users
+            // (1) Total unique users
             result.TotalUniqueUsers = _completedUsers.Count;
 
-            // 2) total unique workstations
+            // (2) Total unique workstations
             var workstationSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var user in _completedUsers)
             {
@@ -75,14 +96,13 @@ namespace SecureLens
             }
             result.TotalUniqueWorkstations = workstationSet.Count;
 
-            // 3) figure out membership for each setting
+            // (3) Membership for each setting
             var settingMembership = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
             foreach (var s in _settings)
             {
                 settingMembership[s.Name] = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             }
 
-            // assign user to each setting based on AD group intersection
             foreach (var user in _completedUsers)
             {
                 if (user.ActiveDirectoryUser == null) continue;
@@ -101,7 +121,6 @@ namespace SecureLens
                 }
             }
 
-            // store final membership counts
             foreach (var s in _settings)
             {
                 result.MembersPerSetting[s.Name] = settingMembership[s.Name].Count;
@@ -109,7 +128,7 @@ namespace SecureLens
                 result.TitlesUnderSetting[s.Name] = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             }
 
-            // 4) gather departments/titles for each setting
+            // (4) Departments and Titles per setting
             foreach (var user in _completedUsers)
             {
                 if (user.ActiveDirectoryUser == null) continue;
@@ -134,7 +153,7 @@ namespace SecureLens
                 }
             }
 
-            // 5) count how many users have >= 5 elevations
+            // (5) Users with >= 5 elevations
             int usersWith5 = 0;
             foreach (var user in _completedUsers)
             {
@@ -146,32 +165,6 @@ namespace SecureLens
             result.UsersWith5Elevations = usersWith5;
 
             return result;
-        }
-
-        public void PrintOverallStatistics(OverallStatisticsResult stats)
-        {
-            var rows = new List<string[]>
-            {
-                new string[] { "Total unique users in environment:", stats.TotalUniqueUsers.ToString() },
-                new string[] { "Total unique workstations:", stats.TotalUniqueWorkstations.ToString() }
-            };
-
-            foreach (var s in _settings)
-            {
-                rows.Add(new string[] 
-                { 
-                    $"Total members able to use '{s.Name}':", 
-                    stats.MembersPerSetting[s.Name].ToString() 
-                });
-            }
-
-            rows.Add(new string[]
-            {
-                "Users with at least 5 elevations in period:",
-                stats.UsersWith5Elevations.ToString()
-            });
-
-            ConsoleTablePrinter.PrintTable("Overall Statistics", new List<string> { "Description", "Count" }, rows, 80);
         }
 
         #endregion
@@ -287,79 +280,150 @@ namespace SecureLens
             }
         }
 
-        public void PrintApplicationStatistics(Dictionary<string, ApplicationStatisticsResult> appStats)
+        #endregion
+
+        #region TerminalStatistics
+
+        /// <summary>
+        /// Computes who ran which "terminal" applications. 
+        /// For each user that ran terminal apps, builds a TerminalStatisticsRow with:
+        /// - User
+        /// - Aggregated Applications + counts
+        /// - Department, Title, Settings used
+        /// - "Run As Admin" type
+        /// - Source AD Groups
+        /// </summary>
+        public List<TerminalStatisticsRow> ComputeTerminalStatistics()
         {
-            var sortedApps = appStats.OrderByDescending(kvp => kvp.Value.TotalCount).ToList();
-            var rows = new List<string[]>();
+            // user -> (appName -> count)
+            var userTerminalApps = new Dictionary<string, Dictionary<string, int>>(StringComparer.OrdinalIgnoreCase);
 
-            foreach (var kvp in sortedApps)
+            // Build quick lookups for user’s department, title, AD groups, settings
+            var userDepartments = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var userTitles = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var userAdGroups = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+            var userSettings = BuildUserSettingsLookup();  // user => list<settings>
+
+            foreach (var user in _completedUsers)
             {
-                string appName = kvp.Key;
-                var stats = kvp.Value;
+                userTerminalApps[user.AccountName] = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
-                rows.Add(new string[]
+                if (user.ActiveDirectoryUser != null)
                 {
-                    stats.TotalCount.ToString(),
-                    appName,
-                    stats.Vendor,
-                    stats.Preapproved ? "True" : "False",
-                    stats.TechnologyCount.ToString(),
-                    stats.ElevateTerminalRightsCount.ToString(),
-                    stats.GlobalCount.ToString()
-                });
+                    userDepartments[user.AccountName] = user.ActiveDirectoryUser.Department ?? "N/A";
+                    userTitles[user.AccountName] = user.ActiveDirectoryUser.Title ?? "N/A";
+                    var groups = user.ActiveDirectoryUser.Groups.Select(g => g.Name).ToList();
+                    userAdGroups[user.AccountName] = groups;
+                }
+                else
+                {
+                    userDepartments[user.AccountName] = "N/A";
+                    userTitles[user.AccountName] = "N/A";
+                    userAdGroups[user.AccountName] = new List<string>();
+                }
             }
 
-            var columns = new List<string>
+            // Parse AuditLogs for recognized terminal apps
+            foreach (var user in _completedUsers)
             {
-                "Total Count",
-                "Application",
-                "Vendor",
-                "Pre-approved",
-                "'Technology' Count",
-                "'Elevate Terminal Rights' Count",
-                "'Global' Count"
-            };
+                var appsForUser = userTerminalApps[user.AccountName];
 
-            ConsoleTablePrinter.PrintTable("Application Statistics", columns, rows, 120);
+                foreach (var entry in user.AuditLogEntries)
+                {
+                    if (entry.Type == "Run As Admin" && entry.Application != null)
+                    {
+                        string appName = entry.Application.Name ?? "";
+                        if (IsTerminalApp(appName))
+                        {
+                            if (!appsForUser.ContainsKey(appName))
+                                appsForUser[appName] = 0;
+                            appsForUser[appName]++;
+                        }
+                    }
+                    else if (entry.Type == "Admin Session" && entry.ElevatedApplications != null)
+                    {
+                        foreach (var elevatedApp in entry.ElevatedApplications)
+                        {
+                            string appName = elevatedApp.Name ?? "";
+                            if (IsTerminalApp(appName))
+                            {
+                                if (!appsForUser.ContainsKey(appName))
+                                    appsForUser[appName] = 0;
+                                appsForUser[appName]++;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Convert the dictionary to a list of TerminalStatisticsRow
+            var result = new List<TerminalStatisticsRow>();
+            foreach (var user in _completedUsers)
+            {
+                var apps = userTerminalApps[user.AccountName];
+                if (apps.Count == 0) 
+                    continue;  // user didn't run recognized terminal apps
+
+                int totalCount = 0;
+                var appStrings = new List<string>();
+                foreach (var kvp in apps.OrderByDescending(k => k.Value))
+                {
+                    appStrings.Add($"{kvp.Key} ({kvp.Value})");
+                    totalCount += kvp.Value;
+                }
+                string applicationsStr = string.Join(", ", appStrings);
+
+                var settingNames = userSettings[user.AccountName];
+                settingNames.Sort(StringComparer.OrdinalIgnoreCase);
+                string settingsUsed = settingNames.Count > 0 ? string.Join(", ", settingNames) : "N/A";
+
+                var groups = userAdGroups[user.AccountName];
+                groups.Sort(StringComparer.OrdinalIgnoreCase);
+                string sourceAdGroups = groups.Count > 0 ? string.Join(", ", groups) : "N/A";
+
+                var row = new TerminalStatisticsRow
+                {
+                    User = user.AccountName, // or a friendlier name if available
+                    Applications = applicationsStr,
+                    Count = totalCount,
+                    Department = userDepartments[user.AccountName],
+                    Title = userTitles[user.AccountName],
+                    SettingsUsed = settingsUsed,
+                    Types = "Run As Admin",  // or some combined label if needed
+                    SourceADGroups = sourceAdGroups
+                };
+                result.Add(row);
+            }
+
+            // Sort descending by count
+            return result.OrderByDescending(r => r.Count).ToList();
+        }
+
+        /// <summary>
+        /// Checks if the given appName is recognized as a "terminal" application
+        /// according to KnownTerminalApps.
+        /// </summary>
+        private bool IsTerminalApp(string appName)
+        {
+            return KnownTerminalApps.Contains(appName.Trim());
         }
 
         #endregion
 
-        #region Unused AD Groups
+        #region UnusedAdGroups
 
-        /// <summary>
-        /// Finds AD groups (under the relevant settings) that had no elevations. 
-        /// For each "unused" group, also returns the number of users in that group. 
-        /// 
-        /// The logic: 
-        /// 1) For each setting, look at each AD group in AdminByRequestSetting.ActiveDirectoryGroups. 
-        /// 2) If no user from that group had any app/session elevation, the group is "unused." 
-        /// 3) "NumberOfUsers" can come from the AD user cache or from CompletedUsers, 
-        ///    but typically from AD if we want the total members. 
-        ///    Or if we just want the intersection with CompletedUsers, adapt logic accordingly.
-        /// </summary>
-        /// <param name="adClient">We rely on AD data to see how many users are in each group.</param>
         public List<UnusedAdGroupResult> ComputeUnusedAdGroups(ActiveDirectoryClient adClient)
         {
             var results = new List<UnusedAdGroupResult>();
 
             if (adClient == null)
-            {
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine("Warning: ActiveDirectoryClient is null. Cannot compute unused AD groups.");
-                Console.ResetColor();
-                return results;
-            }
+                throw new ArgumentNullException(nameof(adClient), "ActiveDirectoryClient is null. Cannot compute unused AD groups.");
 
-            // 1) Identify which AD groups are actually "used." 
-            //    A group is "used" if any user from that group had at least 1 elevation.
             var usedGroups = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            // Build a helper: user => the AD group names they belong to
             var userToGroups = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
             foreach (var user in _completedUsers)
             {
-                var userAccount = user.AccountName; // already normalized
+                var userAccount = user.AccountName;
                 userToGroups[userAccount] = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
                 if (user.ActiveDirectoryUser != null)
@@ -372,14 +436,13 @@ namespace SecureLens
                 }
             }
 
-            // Step 2) For each user, if the user had any elevations, mark their groups as "used".
+            // Mark groups as used if any user has elevations
             foreach (var user in _completedUsers)
             {
                 int elevationCount = user.AuditLogEntries
                                          .Count(a => a.Type == "Run As Admin" || a.Type == "Admin Session");
                 if (elevationCount > 0)
                 {
-                    // user has elevations => all AD groups of this user are used
                     foreach (var g in userToGroups[user.AccountName])
                     {
                         usedGroups.Add(g);
@@ -387,32 +450,16 @@ namespace SecureLens
                 }
             }
 
-            // 3) For each setting, for each AD group in that setting, check if it is in usedGroups
-            //    If not, it's "unused." We then figure out how many members are in that group via adClient or userToGroups
+            // Identify which groups from the settings are not in usedGroups
             foreach (var setting in _settings)
             {
-                // We'll only do this for "Elevate Terminal Rights" and "Technology" 
-                // if you want it specifically. If you want to include "Global," do so as well.
-                // But let's say the question specifically mentions: "Unused AD Groups under 'Elevate Terminal Rights' and 'Technology'"
-                // Then we skip 'Global' or others if needed. 
-                if (setting.Name == "Global")
-                {
-                    // If you want to skip Global, uncomment:
-                    //continue;
-                }
-
                 foreach (var groupName in setting.ActiveDirectoryGroups)
                 {
                     if (!usedGroups.Contains(groupName))
                     {
-                        // Unused group
-                        // Next find how many users are in that group (via AD client groupCache or so).
-                        // We'll do "QueryAdGroupFromCache" or "CollectAdGroupMembersFromCache"
-                        // The user wants "Number of Users" which presumably is the count of that group from cache
                         var members = adClient.QueryAdGroupFromCache(groupName);
                         int numberOfUsers = members.Count;
 
-                        // Add to results
                         results.Add(new UnusedAdGroupResult
                         {
                             ADGroup = groupName,
@@ -424,40 +471,6 @@ namespace SecureLens
             }
 
             return results;
-        }
-
-        /// <summary>
-        /// Print unused AD groups in a table, sorting by Setting and group name, for example.
-        /// </summary>
-        public void PrintUnusedAdGroups(List<UnusedAdGroupResult> unusedGroups)
-        {
-            if (unusedGroups == null || unusedGroups.Count == 0)
-            {
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("All AD groups under these settings are involved in elevations. No unused groups found.");
-                Console.ResetColor();
-                return;
-            }
-
-            var sorted = unusedGroups
-                .OrderBy(u => u.Setting, StringComparer.OrdinalIgnoreCase)
-                .ThenBy(u => u.ADGroup, StringComparer.OrdinalIgnoreCase)
-                .ToList();
-
-            var rows = new List<string[]>();
-            foreach (var item in sorted)
-            {
-                rows.Add(new string[]
-                {
-                    item.ADGroup,
-                    item.Setting,
-                    item.NumberOfUsers.ToString()
-                });
-            }
-
-            var columns = new List<string> { "AD Group", "Setting", "Number of Users" };
-            ConsoleTablePrinter.PrintTable("Unused AD Groups under 'Elevate Terminal Rights' and 'Technology'", 
-                                            columns, rows, 80);
         }
 
         #endregion

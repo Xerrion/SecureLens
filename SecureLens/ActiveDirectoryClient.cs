@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.IO;
+﻿using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 
@@ -30,13 +26,6 @@ namespace SecureLens
 
                 string json = File.ReadAllText(filePath);
                 groupCache = JsonSerializer.Deserialize<Dictionary<string, List<string>>>(json);
-                
-                Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine($"Loading cached Active Directory groups from {filePath}");
-                Console.ResetColor();
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"Loaded {groupCache?.Count ?? 0} Active Directory groups");
-                Console.ResetColor();
             }
             catch (Exception ex)
             {
@@ -101,13 +90,6 @@ namespace SecureLens
 
                     userCache[userId] = mappedUser;
                 }
-
-                Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine($"Loading cached Active Directory users from {filePath}");
-                Console.ResetColor();
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"Loaded {userCache.Count} Active Directory users");
-                Console.ResetColor();
             }
             catch (Exception ex)
             {
@@ -129,9 +111,6 @@ namespace SecureLens
 
             if (groupCache.TryGetValue(groupName, out var members))
             {
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"[CACHE] Found {members.Count} members in group '{groupName}'.");
-                Console.ResetColor();
                 return members;
             }
             else
@@ -172,10 +151,6 @@ namespace SecureLens
                     groupsNotFound++;
                 }
             }
-
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine($"[CACHE] Collected members from {groupsFound} groups. Total unique members: {allMembers.Count}");
-            Console.ResetColor();
 
             if (groupsNotFound > 0)
             {
@@ -253,10 +228,6 @@ Get-ADGroupMember -Identity ""{groupName}"" -Recursive | Select-Object -ExpandPr
                         var lines = stdout.Trim().Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
                         var groupMembers = lines.ToList();
 
-                        Console.ForegroundColor = ConsoleColor.Green;
-                        Console.WriteLine($"Fetched {groupMembers.Count} members from AD group: '{groupName}'.");
-                        Console.ResetColor();
-
                         return groupMembers;
                     }
                     else
@@ -313,10 +284,6 @@ Get-ADGroupMember -Identity ""{groupName}"" -Recursive | Select-Object -ExpandPr
                     groupsNotFound++;
                 }
             }
-
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine($"Collected members from {groupsQueried} groups.");
-            Console.ResetColor();
 
             if (groupsNotFound > 0)
             {

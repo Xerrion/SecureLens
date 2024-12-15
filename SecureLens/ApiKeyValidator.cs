@@ -1,20 +1,19 @@
-﻿using System;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 
-namespace DefaultNamespace
+namespace SecureLens
 {
     public static class ApiKeyValidator
     {
-        // Definer regex-mønstret for API-nøglen med case-insensitive indstillinger
+        // Define regex-pattern for API-key with case-insensitive settings
         private static readonly Regex ApiKeyPattern = new Regex(
             @"^[A-Z0-9]{8}(-[A-Z0-9]{4}){3}-[A-Z0-9]{12}$",
             RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         /// <summary>
-        /// Validerer API-nøgleformatet.
+        /// Validates API-key format.
         /// </summary>
-        /// <param name="apiKey">API-nøglestrengen, der skal valideres.</param>
-        /// <returns>True hvis gyldig; ellers, false.</returns>
+        /// <param name="apiKey">API-key string</param>
+        /// <returns>True if valid - else false</returns>
         public static bool IsValid(string apiKey)
         {
             if (string.IsNullOrEmpty(apiKey))

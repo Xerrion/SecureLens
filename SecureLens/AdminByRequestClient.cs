@@ -1,17 +1,11 @@
-﻿using SecureLens;
+﻿using System.Net.Http.Headers;
 using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.IO;
-using System.Threading.Tasks;
 
-namespace DefaultNamespace
+namespace SecureLens
 {
     public class AdminByRequestClient
     {
-        private static readonly HttpClient client = new HttpClient();
+        private static readonly HttpClient Client = new HttpClient();
         private readonly string BaseUrlAudit;
         private readonly string BaseUrlInventory;
         private readonly string ApiKey;
@@ -42,25 +36,17 @@ namespace DefaultNamespace
         
         public void CreateSetting(string name, List<string> groups)
         {
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine($"Created setting: {name} containing {groups.Count} AD-groups");
-            Console.ResetColor();
-    
             // Create a new setting and add it to the Settings list
             AdminByRequestSetting setting = new AdminByRequestSetting(name, groups);
             this.Settings.Add(setting);
         }
-
         
         /// <summary>
-        /// Fetches inventory data asynchronously from Admin By Request API (live).
+        /// Fetches inventory data asynchronously from Admin By Request API.
         /// </summary>
         public async Task<List<InventoryLogEntry>> FetchInventoryDataAsync()
         {
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine("Fetching inventory data from Admin By Request (live)...");
-            Console.ResetColor();
-
+            
             var queryParams = new Dictionary<string, string>
             {
                 { "take", Take },
@@ -79,7 +65,7 @@ namespace DefaultNamespace
                     request.Headers.Accept.Clear();
                     request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-                    var response = await client.SendAsync(request);
+                    var response = await Client.SendAsync(request);
                     if (response.IsSuccessStatusCode)
                     {
                         var content = await response.Content.ReadAsStringAsync();
@@ -88,11 +74,6 @@ namespace DefaultNamespace
                         {
                             var inventoryData = JsonConvert.DeserializeObject<List<InventoryLogEntry>>(content);
                             DataSanitizer.SanitizeInventoryLogs(inventoryData);
-
-                            Console.ForegroundColor = ConsoleColor.Green;
-                            Console.WriteLine($"Fetched {inventoryData.Count} inventory records (live).");
-                            Console.ResetColor();
-
                             return inventoryData;
                         }
                         catch (JsonException e)
@@ -129,14 +110,10 @@ namespace DefaultNamespace
         }
 
         /// <summary>
-        /// Fetches audit log entries asynchronously from Admin By Request API (live), no pagination logic here.
+        /// Fetches audit log entries asynchronously from Admin By Request API
         /// </summary>
         public async Task<List<AuditLogEntry>> FetchAuditLogsAsync(Dictionary<string, string> @params)
         {
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine("Fetching audit logs from Admin By Request (live)...");
-            Console.ResetColor();
-
             var url = $"{BaseUrlAudit}?{BuildQueryString(@params)}";
 
             try
@@ -149,7 +126,7 @@ namespace DefaultNamespace
                     request.Headers.Accept.Clear();
                     request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-                    var response = await client.SendAsync(request);
+                    var response = await Client.SendAsync(request);
                     if (response.IsSuccessStatusCode)
                     {
                         var content = await response.Content.ReadAsStringAsync();
@@ -158,11 +135,6 @@ namespace DefaultNamespace
                         {
                             var auditLogs = JsonConvert.DeserializeObject<List<AuditLogEntry>>(content);
                             DataSanitizer.SanitizeAuditLogs(auditLogs);
-
-                            Console.ForegroundColor = ConsoleColor.Green;
-                            Console.WriteLine($"Fetched {auditLogs.Count} audit log records (live).");
-                            Console.ResetColor();
-
                             return auditLogs;
                         }
                         catch (JsonException e)
@@ -209,10 +181,6 @@ namespace DefaultNamespace
         /// </summary>
         public List<InventoryLogEntry> LoadCachedInventoryData(string filePath)
         {
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine($"Loading cached inventory data from file: {filePath}");
-            Console.ResetColor();
-
             if (!File.Exists(filePath))
             {
                 Console.ForegroundColor = ConsoleColor.Red;
@@ -228,10 +196,6 @@ namespace DefaultNamespace
 
                 // Optionally sanitize
                 DataSanitizer.SanitizeInventoryLogs(inventoryData);
-
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"Loaded {inventoryData.Count} cached inventory records.");
-                Console.ResetColor();
 
                 return inventoryData;
             }
@@ -256,9 +220,6 @@ namespace DefaultNamespace
         /// </summary>
         public List<AuditLogEntry> LoadCachedAuditLogs(string filePath)
         {
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine($"Loading cached audit logs from file: {filePath}");
-            Console.ResetColor();
 
             if (!File.Exists(filePath))
             {
@@ -275,11 +236,6 @@ namespace DefaultNamespace
 
                 // Optionally sanitize
                 DataSanitizer.SanitizeAuditLogs(auditLogs);
-
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"Loaded {auditLogs.Count} cached audit log records.");
-                Console.ResetColor();
-
                 return auditLogs;
             }
             catch (JsonException ex)

@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace SecureLens
+﻿namespace SecureLens
 {
     public static class DataSanitizer
     {

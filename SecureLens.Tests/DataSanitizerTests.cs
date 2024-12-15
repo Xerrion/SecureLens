@@ -1,8 +1,4 @@
-﻿using Xunit;
-using SecureLens;
-using System.Collections.Generic;
-
-namespace SecureLens.Tests
+﻿namespace SecureLens.Tests
 {
     public class DataSanitizerTests
     {

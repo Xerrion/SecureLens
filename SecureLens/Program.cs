@@ -1,10 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
-using DefaultNamespace;
-using SecureLens;
-using System.Collections.Generic;
-
-namespace DefaultNamespace
+﻿namespace SecureLens
 {
     class Program
     {
@@ -12,15 +6,15 @@ namespace DefaultNamespace
         {
             var auditParams = new Dictionary<string, string>
             {
-                { "take", "1000" }, // Adjust as needed, maximum is 10000
-                { "wantscandetails", "1" }, // Include scan details
+                { "take", "1000" }, // Adjust as needed
+                { "wantscandetails", "1" },
                 { "startdate", "2023-01-01" },
                 { "enddate", "2025-12-31" },
                 { "status", "Finished" },
                 { "type", "app" }
             };
 
-            // Define the settings and their corresponding AD groups
+            // Hardcoded settings groups for developer cache mode - anonymized data
             Dictionary<string, List<string>> settingsGroups = new Dictionary<string, List<string>>
             {
                 { "Technology", new List<string> { "Technology" } },
@@ -42,12 +36,11 @@ namespace DefaultNamespace
                 }
             };
             
-            var mySettings = new List<AdminByRequestSetting>();
-            foreach (var kv in settingsGroups)
-            {
-                mySettings.Add(new AdminByRequestSetting(kv.Key, kv.Value));
-            }
-            
+            // Convert settingsGroups dictionary to a list of AdminByRequestSetting
+            var mySettings = settingsGroups
+                .Select(kv => new AdminByRequestSetting(kv.Key, kv.Value))
+                .ToList();
+
             Console.WriteLine("=== SecureLens Console Application ===");
 
             Console.ForegroundColor = ConsoleColor.Yellow;
@@ -60,66 +53,89 @@ namespace DefaultNamespace
             {
                 Console.WriteLine("You have chosen 'cache' mode. Loading from local JSON...");
 
-                // Initialize AdminByRequestClient with an empty/dummy API key, since we won't call the real API
-                var client = new AdminByRequestClient("");
-                foreach (var entry in settingsGroups)
+                try
                 {
-                    string settingName = entry.Key;
-                    List<string> activeDirectoryGroups = entry.Value;
-                    client.CreateSetting(settingName, activeDirectoryGroups);
+                    var client = new AdminByRequestClient("");
+                    foreach (var entry in settingsGroups)
+                    {
+                        string settingName = entry.Key;
+                        List<string> activeDirectoryGroups = entry.Value;
+                        client.CreateSetting(settingName, activeDirectoryGroups);
+                        Console.WriteLine($"Created setting: {settingName} containing {activeDirectoryGroups.Count} AD-groups");
+                    }
+
+                    // Paths cached JSON files
+                    string cachedInventoryPath  = @"../../../../MockData/cached_inventory.json";
+                    string cachedAuditLogsPath  = @"../../../../MockData/cached_auditlogs.json";
+                    string cachedAdGroupsPath   = @"../../../../MockData/cached_adgroup_queries.json";
+                    string cachedAdMembersPath  = @"../../../../MockData/cached_admember_queries.json";
+
+                    // Load Cached Inventory
+                    Console.WriteLine($"Loading cached inventory data from file: {cachedInventoryPath}");
+                    List<InventoryLogEntry> inventory = client.LoadCachedInventoryData(cachedInventoryPath);
+                    Console.WriteLine($"Loaded {inventory.Count} cached inventory records.");
+
+                    // Load Cached Audit Logs
+                    Console.WriteLine($"Loading cached audit logs from file: {cachedAuditLogsPath}");
+                    List<AuditLogEntry> auditLogs = client.LoadCachedAuditLogs(cachedAuditLogsPath);
+                    Console.WriteLine($"Loaded {auditLogs.Count} cached audit log records.");
+
+                    // Load AD cache data
+                    Console.WriteLine($"Loading cached Active Directory groups from {cachedAdGroupsPath}");
+                    var adClient = new ActiveDirectoryClient();
+                    adClient.LoadCachedGroupData(cachedAdGroupsPath);
+                    
+                    adClient.LoadCachedAdData(cachedAdMembersPath);
+
+                    // Combine everything into CompletedUser list
+                    Console.WriteLine("Building Completed Users to prepare analysis...");
+                    var dataHandler = new DataHandler(auditLogs, inventory, adClient);
+                    List<CompletedUser> completedUsers = dataHandler.BuildCompletedUsers();
+
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine($"[CACHE] Built {completedUsers.Count} CompletedUsers from the data.");
+                    Console.ResetColor();
+                    
+                    // Initialize Analyzer with CompletedUsers and Settings
+                    var analyzer = new Analyzer(completedUsers, mySettings);
+
+                    // Compute everything
+                    var overallStats = analyzer.ComputeOverallStatistics();
+                    var unusedGroups = analyzer.ComputeUnusedAdGroups(adClient);
+                    var appStats = analyzer.ComputeApplicationStatistics();
+                    List<Analyzer.TerminalStatisticsRow> terminalStats = analyzer.ComputeTerminalStatistics();
+
+                    // Generate HTML report
+                    var htmlWriter = new HtmlReportWriter();
+                    string htmlContent = htmlWriter.BuildHtmlReport(
+                        overallStats,
+                        appStats,
+                        terminalStats,
+                        unusedGroups,
+                        mySettings
+                    );
+
+                    // Write to local file
+                    string outputHtmlFile = @"C:\Users\jeppe\Desktop\report.html";
+                    File.WriteAllText(outputHtmlFile, htmlContent);
+                    Console.WriteLine($"[INFO] HTML report successfully written to '{outputHtmlFile}'.");
                 }
-
-                // Paths to your cached JSON files
-                string cachedInventoryPath  = @"../../../../MockData/cached_inventory.json";
-                string cachedAuditLogsPath  = @"../../../../MockData/cached_auditlogs.json";
-                // AD cache files
-                string cachedAdGroupsPath   = @"../../../../MockData/cached_adgroup_queries.json";
-                string cachedAdMembersPath  = @"../../../../MockData/cached_admember_queries.json";
-
-                // Load Cached Inventory
-                List<InventoryLogEntry> inventory = client.LoadCachedInventoryData(cachedInventoryPath);
-
-                // Load Cached Audit Logs
-                List<AuditLogEntry> auditLogs = client.LoadCachedAuditLogs(cachedAuditLogsPath);
-
-                // Now load AD cache data
-                var adClient = new ActiveDirectoryClient();
-                adClient.LoadCachedGroupData(cachedAdGroupsPath);
-                adClient.LoadCachedAdData(cachedAdMembersPath);
-
-                // ---------------------------------------------------------------------
-                // Incorporate DataHandler to combine everything into CompletedUser list
-                // ---------------------------------------------------------------------
-                var dataHandler = new DataHandler(auditLogs, inventory, adClient);
-                List<CompletedUser> completedUsers = dataHandler.BuildCompletedUsers();
-
-                Console.WriteLine($"[CACHE] Built {completedUsers.Count} CompletedUsers from the data.");
-
-                // Example: print details for the first user
-                if (completedUsers.Count > 0)
+                catch (ArgumentNullException ex)
                 {
-                    var first = completedUsers[0];
-                    Console.WriteLine($"\nFirst CompletedUser: {first.AccountName}");
-                    Console.WriteLine($"  Audit Log Entries: {first.AuditLogEntries.Count}");
-                    Console.WriteLine($"  Inventory Entries: {first.InventoryLogEntries.Count}");
-                    Console.WriteLine($"  AD User: {first.ActiveDirectoryUser?.DistinguishedName}");
-                    Console.WriteLine($"  AD Groups: {string.Join(", ", first.ActiveDirectoryUser?.Groups.Select(g => g.Name))}");
+                    // Handle specific exceptions from Analyzer or other classes
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine($"Error: {ex.Message}");
+                    Console.ResetColor();
                 }
-                
-                // Now create the Analyzer with your CompletedUsers & mySettings
-                var analyzer = new Analyzer(completedUsers, mySettings);
-
-                // Compute & print the "overall statistics"
-                Analyzer.OverallStatisticsResult stats = analyzer.ComputeOverallStatistics();
-                List<Analyzer.UnusedAdGroupResult> unusedGroups = analyzer.ComputeUnusedAdGroups(adClient);
-                // 1) Compute Application Statistics
-                var appStats = analyzer.ComputeApplicationStatistics();
-                analyzer.PrintOverallStatistics(stats);
-                analyzer.PrintApplicationStatistics(appStats);
-                analyzer.PrintUnusedAdGroups(unusedGroups);
-                
+                catch (Exception ex)
+                {
+                    // Handle any unexpected exceptions
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine($"An unexpected error occurred: {ex.Message}");
+                    Console.ResetColor();
+                }
             }
-            else
+            else if (mode == "online")
             {
                 Console.WriteLine("You have chosen 'online' mode.");
 
@@ -169,47 +185,110 @@ namespace DefaultNamespace
                 } while (!isValid);
 
                 // Proceed with the valid API key
-                char[] apiKeyChars = apiKeyString.ToCharArray();
-
-                // Create client with the entered API key
-                var client = new AdminByRequestClient(apiKeyString);
-
-                // Fetch Inventory Data (online)
-                Console.WriteLine("=== Inventory Data ===");
-                List<InventoryLogEntry> inventory = await client.FetchInventoryDataAsync();
-                if (inventory.Count > 0)
+                char[] finalApiKeyChars = apiKeyString.ToCharArray();
+                try
                 {
-                    Console.WriteLine($"Fetched {inventory.Count} inventory logs (online).");
-                }
-                else
-                {
-                    Console.WriteLine("No inventory data fetched (online).");
-                }
+                    var client = new AdminByRequestClient(apiKeyString);
 
-                // Fetch Audit Logs (online)
-                Console.WriteLine("\n=== Audit Logs ===");
-                List<AuditLogEntry> auditLogs = await client.FetchAuditLogsAsync(auditParams);
-                if (auditLogs.Count > 0)
-                {
-                    Console.WriteLine($"Fetched {auditLogs.Count} audit logs (online).");
-                }
-                else
-                {
-                    Console.WriteLine("No audit log data fetched (online).");
-                }
+                    // Fetch Inventory Data (online)
+                    Console.WriteLine("=== Inventory Data ===");
+                    List<InventoryLogEntry> inventory = await client.FetchInventoryDataAsync();
+                    if (inventory.Count > 0)
+                    {
+                        Console.WriteLine($"Fetched {inventory.Count} inventory logs (online).");
+                    }
+                    else
+                    {
+                        Console.WriteLine("No inventory data fetched (online).");
+                    }
 
-                // Overwrite the API key in memory for security
-                for (int i = 0; i < apiKeyChars.Length; i++)
-                {
-                    apiKeyChars[i] = '\0'; // Overwrite with null char
-                }
-                apiKeyString = null; // Allow GC
-                
-                Console.WriteLine("\n=== Data Fetched ===");
+                    // Fetch Audit Logs (online)
+                    Console.WriteLine("\n=== Audit Logs ===");
+                    List<AuditLogEntry> auditLogs = await client.FetchAuditLogsAsync(auditParams);
+                    if (auditLogs.Count > 0)
+                    {
+                        Console.WriteLine($"Fetched {auditLogs.Count} audit logs (online).");
+                    }
+                    else
+                    {
+                        Console.WriteLine("No audit log data fetched (online).");
+                    }
 
-                
+                    // Overwrite the API key in memory for security
+                    for (int i = 0; i < finalApiKeyChars.Length; i++)
+                    {
+                        finalApiKeyChars[i] = '\0';
+                    }
+                    apiKeyString = null;
+
+                    Console.WriteLine("\n=== Data Fetched ===");
+
+                    // Combine everything into CompletedUser list
+                    var adClient = new ActiveDirectoryClient();
+                    var dataHandler = new DataHandler(auditLogs, inventory, adClient);
+                    List<CompletedUser> completedUsers = dataHandler.BuildCompletedUsers();
+
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine($"[ONLINE] Built {completedUsers.Count} CompletedUsers from the data.");
+                    Console.ResetColor();
+
+                    // Initialize Analyzer with CompletedUsers and Settings
+                    var analyzer = new Analyzer(completedUsers, mySettings);
+
+                    // Compute everything
+                    var overallStats = analyzer.ComputeOverallStatistics();
+                    var unusedGroups = analyzer.ComputeUnusedAdGroups(adClient);
+                    var appStats = analyzer.ComputeApplicationStatistics();
+                    List<Analyzer.TerminalStatisticsRow> terminalStats = analyzer.ComputeTerminalStatistics();
+
+                    // Generate HTML report
+                    var htmlWriter = new HtmlReportWriter();
+                    string htmlContent = htmlWriter.BuildHtmlReport(
+                        overallStats,
+                        appStats,
+                        terminalStats,
+                        unusedGroups,
+                        mySettings
+                    );
+
+                    // Write to local file
+                    string outputHtmlFile = @"C:\Users\jeppe\Desktop\report.html";
+                    File.WriteAllText(outputHtmlFile, htmlContent);
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine($"[INFO] HTML report successfully written to '{outputHtmlFile}'.");
+                    Console.ResetColor();
+                }
+                catch (ArgumentNullException ex)
+                {
+                    // Handle specific exceptions from Analyzer or other classes
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine($"Error: {ex.Message}");
+                    Console.ResetColor();
+                }
+                catch (Exception ex)
+                {
+                    // Handle any unexpected exceptions
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine($"An unexpected error occurred: {ex.Message}");
+                    Console.ResetColor();
+                }
+                finally
+                {
+                    // Overwrite the API key in memory for security in case of exceptions
+                    for (int i = 0; i < finalApiKeyChars.Length; i++)
+                    {
+                        finalApiKeyChars[i] = '\0';
+                    }
+                    apiKeyString = null;
+                }
             }
-            
+            else
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("Invalid mode selected. Please choose 'cache' or 'online'.");
+                Console.ResetColor();
+            }
+
             Console.WriteLine("\n=== Program Finished ===");
         }
     }
