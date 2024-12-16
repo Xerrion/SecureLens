@@ -1,4 +1,7 @@
-﻿using System.Text;
+﻿using SecureLens.Analysis.Results;
+using SecureLens.Models;
+using System.Collections.Generic;
+using System.Text;
 
 namespace SecureLens
 {
@@ -18,10 +21,10 @@ namespace SecureLens
         /// <param name="settings">AdminByRequestSettings list (to correlate columns or naming)</param>
         /// <returns>An HTML string representing the entire report</returns>
         public string BuildHtmlReport(
-            Analyzer.OverallStatisticsResult overallStats,
-            Dictionary<string, Analyzer.ApplicationStatisticsResult> appStats,
-            List<Analyzer.TerminalStatisticsRow> terminalStats,
-            List<Analyzer.UnusedAdGroupResult> unusedAdGroups,
+            OverallStatisticsResult overallStats,
+            Dictionary<string, ApplicationStatisticsResult> appStats,
+            List<TerminalStatisticsRow> terminalStats,
+            List<UnusedAdGroupResult> unusedAdGroups,
             List<AdminByRequestSetting> settings
         )
         {
@@ -71,7 +74,7 @@ namespace SecureLens
         #region HTML Generators
 
         private string GenerateOverallStatisticsTable(
-            Analyzer.OverallStatisticsResult stats, 
+            OverallStatisticsResult stats, 
             List<AdminByRequestSetting> settings)
         {
             var sb = new StringBuilder();
@@ -102,7 +105,7 @@ namespace SecureLens
         }
 
         private string GenerateApplicationStatisticsTable(
-            Dictionary<string, Analyzer.ApplicationStatisticsResult> appStats)
+            Dictionary<string, ApplicationStatisticsResult> appStats)
         {
             if (appStats == null || appStats.Count == 0)
             {
@@ -146,7 +149,7 @@ namespace SecureLens
             return sb.ToString();
         }
 
-        private string GenerateTerminalStatisticsTable(List<Analyzer.TerminalStatisticsRow> terminalStats)
+        private string GenerateTerminalStatisticsTable(List<TerminalStatisticsRow> terminalStats)
         {
             if (terminalStats == null || terminalStats.Count == 0)
             {
@@ -190,7 +193,7 @@ namespace SecureLens
             return sb.ToString();
         }
 
-        private string GenerateUnusedAdGroupsTable(List<Analyzer.UnusedAdGroupResult> unusedGroups)
+        private string GenerateUnusedAdGroupsTable(List<UnusedAdGroupResult> unusedGroups)
         {
             if (unusedGroups == null || unusedGroups.Count == 0)
             {

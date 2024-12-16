@@ -1,8 +1,11 @@
 ﻿using SecureLens.Data;
 using SecureLens.Logging;
 using SecureLens.Models;
-using SecureLens.Utilities;
 using Microsoft.Extensions.Configuration;
+using SecureLens.Analysis.Results;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.IO;
 
 namespace SecureLens.Services
 {
@@ -10,49 +13,54 @@ namespace SecureLens.Services
     {
         private readonly ILogger _logger;
         private readonly List<AdminByRequestSetting> _settings;
-        private readonly IActiveDirectoryRepository _adRepo;
-        private readonly IAdminByRequestRepository _abrRepo;
         private readonly string _reportPath;
+        private readonly string _auditCachePath;
+        private readonly string _inventoryCachePath;
+        private readonly string _groupCachePath;
+        private readonly string _userCachePath;
+        private readonly IConfiguration _configuration;
+        private readonly Analyzer _analyzer; // Injected Analyzer
 
-        public CacheModeHandler(ILogger logger, List<AdminByRequestSetting> settings, IConfiguration configuration)
+        public CacheModeHandler(
+            ILogger logger,
+            List<AdminByRequestSetting> settings,
+            IConfiguration configuration,
+            Analyzer analyzer) // Injektionsparameter
         {
             _logger = logger;
             _settings = settings;
-
-            // Hent cache stier fra appsettings.json
-            var cachePaths = configuration.GetSection("CachePaths");
-            string groupCachePath = cachePaths.GetValue<string>("GroupCache");
-            string userCachePath = cachePaths.GetValue<string>("UserCache");
-            string cachedInventoryPath = cachePaths.GetValue<string>("Inventory");
-            string cachedAuditLogsPath = cachePaths.GetValue<string>("AuditLogs");
-
-            // Hent rapportstien fra appsettings.json
+            _configuration = configuration;
+            _analyzer = analyzer;
             _reportPath = configuration.GetValue<string>("ReportPath");
-
-            // Opret ActiveDirectoryRepository med cache-strategi
-            _adRepo = RepositoryFactory.CreateActiveDirectoryRepository(
-                _logger,
-                useLiveData: false,
-                groupCacheFilePath: groupCachePath,
-                userCacheFilePath: userCachePath
-            );
-
-            // Opret AdminByRequestRepository med cache-strategi
-            string apiKey = ""; // Ingen API key i cache mode
-            _abrRepo = RepositoryFactory.CreateAdminByRequestRepository(
-                apiKey,
-                _logger,
-                useLiveData: false,
-                cachedInventoryPath: cachedInventoryPath,
-                cachedAuditLogsPath: cachedAuditLogsPath
-            );
+            _auditCachePath = configuration.GetValue<string>("CachePaths:AuditLogs");
+            _inventoryCachePath = configuration.GetValue<string>("CachePaths:Inventory");
+            _groupCachePath = configuration.GetValue<string>("CachePaths:GroupCache");
+            _userCachePath = configuration.GetValue<string>("CachePaths:UserCache");
         }
 
         public async Task ExecuteAsync()
         {
             try
             {
-                var abrService = new AdminByRequestService(_abrRepo);
+                // Opret AdminByRequestRepository i cache mode
+                string apiKey = ""; // Ingen API key i cache mode
+                var abrRepo = RepositoryFactory.CreateAdminByRequestRepository(
+                    apiKey,
+                    _logger,
+                    useLiveData: false,
+                    cachedInventoryPath: _inventoryCachePath,
+                    cachedAuditLogsPath: _auditCachePath
+                );
+
+                // Opret ActiveDirectoryRepository i cache mode
+                var adRepo = RepositoryFactory.CreateActiveDirectoryRepository(
+                    _logger,
+                    useLiveData: false,
+                    groupCacheFilePath: _groupCachePath,
+                    userCacheFilePath: _userCachePath
+                );
+
+                var abrService = new AdminByRequestService(abrRepo);
 
                 foreach (var setting in _settings)
                 {
@@ -60,28 +68,25 @@ namespace SecureLens.Services
                     _logger.LogInfo($"Created setting: {setting.Name} containing {setting.ActiveDirectoryGroups.Count} AD-groups");
                 }
 
-                // Combine allesammen i CompletedUser liste
+                // Kombinér data i CompletedUser liste
                 _logger.LogInfo("Building Completed Users to prepare analysis...");
                 var dataHandler = new DataHandler(
-                    _abrRepo.LoadCachedAuditLogs("../../../../MockData/cached_auditlogs.json"),
-                    _abrRepo.LoadCachedInventoryData("../../../../MockData/cached_auditlogs.json"),
-                    _adRepo,
+                    abrRepo.LoadCachedAuditLogs(_auditCachePath),
+                    abrRepo.LoadCachedInventoryData(_inventoryCachePath),
+                    adRepo,
                     _logger
                 );
                 List<CompletedUser> completedUsers = dataHandler.BuildCompletedUsers();
 
                 _logger.LogInfo($"[CACHE] Built {completedUsers.Count} CompletedUsers from the data.");
 
-                // Initialize Analyzer med CompletedUsers og Settings
-                var analyzer = new Analyzer(completedUsers, _settings);
+                // Beregn alle stats ved hjælp af den injicerede Analyzer
+                var overallStats = _analyzer.ComputeOverallStatistics(completedUsers, _settings);
+                var unusedGroups = _analyzer.ComputeUnusedAdGroups(completedUsers, _settings, adRepo);
+                var appStats = _analyzer.ComputeApplicationStatistics(completedUsers, _settings);
+                List<TerminalStatisticsRow> terminalStats = _analyzer.ComputeTerminalStatistics(completedUsers, _settings);
 
-                // Compute alle stats
-                var overallStats = analyzer.ComputeOverallStatistics();
-                var unusedGroups = analyzer.ComputeUnusedAdGroups(_adRepo); // Brug AD Repository
-                var appStats = analyzer.ComputeApplicationStatistics();
-                List<Analyzer.TerminalStatisticsRow> terminalStats = analyzer.ComputeTerminalStatistics();
-
-                // Generate HTML report
+                // Generér HTML rapport
                 var htmlWriter = new HtmlReportWriter();
                 string htmlContent = htmlWriter.BuildHtmlReport(
                     overallStats,
@@ -91,13 +96,13 @@ namespace SecureLens.Services
                     _settings
                 );
 
-                // Write to local file
+                // Skriv til lokal fil
                 File.WriteAllText(_reportPath, htmlContent);
                 _logger.LogInfo($"[INFO] HTML report successfully written to '{_reportPath}'.");
             }
             catch (ArgumentNullException ex)
             {
-                // Handle specifikke undtagelser fra Analyzer eller andre klasser
+                // Håndter specifikke undtagelser fra Analyzer eller andre klasser
                 _logger.LogError($"Error: {ex.Message}");
             }
             catch (Exception ex)

@@ -1,37 +1,34 @@
-﻿// ModeHandlerFactory.cs
-
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using SecureLens.Logging;
 using SecureLens.Services;
+using Microsoft.Extensions.Configuration;
+using System;
 
 namespace SecureLens.Factories
 {
     public class ModeHandlerFactory
     {
         private readonly IServiceProvider _serviceProvider;
-        private readonly ILogger _logger;
-        private readonly List<AdminByRequestSetting> _settings;
 
-        public ModeHandlerFactory(IServiceProvider serviceProvider, ILogger logger, List<AdminByRequestSetting> settings)
+        public ModeHandlerFactory(IServiceProvider serviceProvider)
         {
             _serviceProvider = serviceProvider;
-            _logger = logger;
-            _settings = settings;
         }
 
         public IModeHandler CreateModeHandler(string mode, string apiKey = "")
         {
-            if (mode == "cache")
+            if (mode.Equals("cache", StringComparison.OrdinalIgnoreCase))
             {
-                return _serviceProvider.GetService<CacheModeHandler>()!;
+                return _serviceProvider.GetRequiredService<CacheModeHandler>();
             }
-            else if (mode == "online")
+            else if (mode.Equals("online", StringComparison.OrdinalIgnoreCase))
             {
-                return new OnlineModeHandler(_logger, _settings, apiKey);
+                // OnlineModeHandler kræver en API-nøgle, så opret den manuelt
+                return ActivatorUtilities.CreateInstance<OnlineModeHandler>(_serviceProvider, apiKey);
             }
             else
             {
-                throw new ArgumentException("Invalid mode");
+                throw new ArgumentException("Invalid mode", nameof(mode));
             }
         }
     }

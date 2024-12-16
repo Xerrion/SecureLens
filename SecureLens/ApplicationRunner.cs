@@ -1,11 +1,13 @@
-﻿// ApplicationRunner.cs
-using SecureLens.UI;
-using SecureLens.Services;
+﻿using SecureLens.Analysis;
+using SecureLens.Analysis.Results;
+using SecureLens.Data;
 using SecureLens.Logging;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 using SecureLens.Factories;
-using Microsoft.Extensions.DependencyInjection;
+using SecureLens.UI;
 
-namespace SecureLens
+namespace SecureLens.Services
 {
     public class ApplicationRunner
     {
@@ -14,7 +16,11 @@ namespace SecureLens
         private readonly SettingsManager _settingsManager;
         private readonly ModeHandlerFactory _factory;
 
-        public ApplicationRunner(ILogger logger, UserInterface ui, SettingsManager settingsManager, ModeHandlerFactory factory)
+        public ApplicationRunner(
+            ILogger logger,
+            UserInterface ui,
+            SettingsManager settingsManager,
+            ModeHandlerFactory factory)
         {
             _logger = logger;
             _ui = ui;
@@ -30,14 +36,14 @@ namespace SecureLens
 
             string mode = _ui.GetMode();
 
-            if (mode == "cache")
+            if (mode.Equals("cache", StringComparison.OrdinalIgnoreCase))
             {
                 _logger.LogInfo("You have chosen 'cache' mode. Loading from local JSON...");
 
                 var cacheHandler = _factory.CreateModeHandler("cache");
                 await cacheHandler.ExecuteAsync();
             }
-            else if (mode == "online")
+            else if (mode.Equals("online", StringComparison.OrdinalIgnoreCase))
             {
                 _logger.LogInfo("You have chosen 'online' mode.");
 

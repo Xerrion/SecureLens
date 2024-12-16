@@ -1,8 +1,11 @@
-﻿// OnlineModeHandler.cs
-using SecureLens.Data;
+﻿using SecureLens.Data;
 using SecureLens.Logging;
 using SecureLens.Models;
-using SecureLens.Utilities;
+using Microsoft.Extensions.Configuration;
+using SecureLens.Analysis.Results;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.IO;
 
 namespace SecureLens.Services
 {
@@ -10,35 +13,46 @@ namespace SecureLens.Services
     {
         private readonly ILogger _logger;
         private readonly List<AdminByRequestSetting> _settings;
-        private readonly IActiveDirectoryRepository _adRepo;
-        private readonly IAdminByRequestRepository _abrRepo;
         private readonly string _apiKey;
+        private readonly string _reportPath;
+        private readonly string _groupCachePath;
+        private readonly string _userCachePath;
+        private readonly IConfiguration _configuration;
+        private readonly Analyzer _analyzer; // Injected Analyzer
 
-        public OnlineModeHandler(ILogger logger, List<AdminByRequestSetting> settings, string apiKey)
+        public OnlineModeHandler(
+            ILogger logger,
+            List<AdminByRequestSetting> settings,
+            string apiKey,
+            IConfiguration configuration,
+            Analyzer analyzer) // Injektionsparameter
         {
             _logger = logger;
             _settings = settings;
             _apiKey = apiKey;
-
-            // Opret ActiveDirectoryRepository med live-strategi
-            _adRepo = RepositoryFactory.CreateActiveDirectoryRepository(
-                _logger,
-                useLiveData: true
-            );
-
-            // Opret AdminByRequestRepository med live-strategi
-            _abrRepo = RepositoryFactory.CreateAdminByRequestRepository(
-                _apiKey,
-                _logger,
-                useLiveData: true
-            );
+            _configuration = configuration;
+            _analyzer = analyzer;
+            _reportPath = configuration.GetValue<string>("ReportPath");
+            _groupCachePath = configuration.GetValue<string>("CachePaths:GroupCache");
+            _userCachePath = configuration.GetValue<string>("CachePaths:UserCache");
         }
 
         public async Task ExecuteAsync()
         {
             try
             {
-                var abrService = new AdminByRequestService(_abrRepo);
+                var abrRepo = RepositoryFactory.CreateAdminByRequestRepository(
+                    _apiKey,
+                    _logger,
+                    useLiveData: true
+                );
+
+                var adRepo = RepositoryFactory.CreateActiveDirectoryRepository(
+                    _logger,
+                    useLiveData: true
+                );
+
+                var abrService = new AdminByRequestService(abrRepo);
 
                 foreach (var setting in _settings)
                 {
@@ -48,7 +62,7 @@ namespace SecureLens.Services
 
                 // Fetch Inventory Data (online)
                 _logger.LogInfo("=== Inventory Data ===");
-                List<InventoryLogEntry> inventory = await _abrRepo.FetchInventoryDataAsync();
+                List<InventoryLogEntry> inventory = await abrRepo.FetchInventoryDataAsync();
                 if (inventory.Count > 0)
                 {
                     _logger.LogInfo($"Fetched {inventory.Count} inventory logs (online).");
@@ -69,7 +83,7 @@ namespace SecureLens.Services
                     { "status", "Finished" },
                     { "type", "app" }
                 };
-                List<AuditLogEntry> auditLogs = await _abrRepo.FetchAuditLogsAsync(auditParams);
+                List<AuditLogEntry> auditLogs = await abrRepo.FetchAuditLogsAsync(auditParams);
                 if (auditLogs.Count > 0)
                 {
                     _logger.LogInfo($"Fetched {auditLogs.Count} audit logs (online).");
@@ -81,21 +95,18 @@ namespace SecureLens.Services
 
                 // Combine allesammen i CompletedUser liste
                 _logger.LogInfo("Building Completed Users to prepare analysis...");
-                var dataHandler = new DataHandler(auditLogs, inventory, _adRepo, _logger);
+                var dataHandler = new DataHandler(auditLogs, inventory, adRepo, _logger);
                 List<CompletedUser> completedUsers = dataHandler.BuildCompletedUsers();
 
                 _logger.LogInfo($"[ONLINE] Built {completedUsers.Count} CompletedUsers from the data.");
 
-                // Initialize Analyzer med CompletedUsers og Settings
-                var analyzer = new Analyzer(completedUsers, _settings);
+                // Beregn alle stats ved hjælp af den injicerede Analyzer
+                var overallStats = _analyzer.ComputeOverallStatistics(completedUsers, _settings);
+                var unusedGroups = _analyzer.ComputeUnusedAdGroups(completedUsers, _settings, adRepo);
+                var appStats = _analyzer.ComputeApplicationStatistics(completedUsers, _settings);
+                List<TerminalStatisticsRow> terminalStats = _analyzer.ComputeTerminalStatistics(completedUsers, _settings);
 
-                // Compute alle stats
-                var overallStats = analyzer.ComputeOverallStatistics();
-                var unusedGroups = analyzer.ComputeUnusedAdGroups(_adRepo);
-                var appStats = analyzer.ComputeApplicationStatistics();
-                List<Analyzer.TerminalStatisticsRow> terminalStats = analyzer.ComputeTerminalStatistics();
-
-                // Generate HTML report
+                // Generér HTML rapport
                 var htmlWriter = new HtmlReportWriter();
                 string htmlContent = htmlWriter.BuildHtmlReport(
                     overallStats,
@@ -105,14 +116,13 @@ namespace SecureLens.Services
                     _settings
                 );
 
-                // Write to local file
-                string outputHtmlFile = @"C:\Users\jeppe\Desktop\report.html";
-                File.WriteAllText(outputHtmlFile, htmlContent);
-                _logger.LogInfo($"[INFO] HTML report successfully written to '{outputHtmlFile}'.");
+                // Skriv til lokal fil
+                File.WriteAllText(_reportPath, htmlContent);
+                _logger.LogInfo($"[INFO] HTML report successfully written to '{_reportPath}'.");
             }
             catch (ArgumentNullException ex)
             {
-                // Handle specifikke undtagelser fra Analyzer eller andre klasser
+                // Håndter specifikke undtagelser fra Analyzer eller andre klasser
                 _logger.LogError($"Error: {ex.Message}");
             }
             catch (Exception ex)
@@ -123,11 +133,8 @@ namespace SecureLens.Services
             finally
             {
                 // Overwrite the API key in memory for security
-                for (int i = 0; i < _apiKey.Length; i++)
-                {
-                    // Dette kræver, at _apiKey er et char array
-                    // Overvej at ændre _apiKey til en char array hvis nødvendigt
-                }
+                // Dette kræver, at _apiKey er et char array
+                // Overvej at ændre _apiKey til en char array hvis nødvendigt
             }
         }
     }
