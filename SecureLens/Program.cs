@@ -1,14 +1,13 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
-using SecureLens.Logging;
-using SecureLens.Services;
 using SecureLens.UI;
-using SecureLens.Factories;
-using System.IO;
-using SecureLens.Data;
-using SecureLens.Data.Strategies;
-using SecureLens.Data.Strategies.Interfaces;
-using SecureLens.Analysis;
+using SecureLens.Application;
+using SecureLens.Application.Analysis.Calculators;
+using SecureLens.Application.Analysis.Interfaces;
+using SecureLens.Application.Services;
+using SecureLens.Core.Models;
+using SecureLens.Infrastructure.Factories;
+using SecureLens.Infrastructure.Logging;
 
 namespace SecureLens
 {
@@ -19,8 +18,8 @@ namespace SecureLens
             // Byg konfiguration
             var configuration = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-                .AddJsonFile("adminbyrequestsettings.json", optional: false, reloadOnChange: true)
+                .AddJsonFile("config/appsettings.json", optional: false, reloadOnChange: true)
+                .AddJsonFile("config/adminbyrequestsettings.json", optional: false, reloadOnChange: true)
                 .Build();
 
             // Opsæt DI
