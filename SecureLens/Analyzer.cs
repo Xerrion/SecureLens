@@ -455,7 +455,7 @@ namespace SecureLens
                 {
                     if (!usedGroups.Contains(groupName))
                     {
-                        var members = adRepo.QueryAdGroupFromFile(groupName);
+                        var members = adRepo.QueryAdGroup(groupName);
                         int numberOfUsers = members.Count;
 
                         results.Add(new UnusedAdGroupResult

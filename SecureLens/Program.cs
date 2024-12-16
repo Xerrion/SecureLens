@@ -1,5 +1,6 @@
 ﻿using System.Net.Http.Headers;
 using SecureLens.Data;
+using SecureLens.Data.Stragies;
 using SecureLens.Logging;
 using SecureLens.Models;
 using SecureLens.Services;
@@ -93,7 +94,7 @@ namespace SecureLens
 
                     // Load AD cache data
                     Console.WriteLine($"Loading cached Active Directory groups from {cachedAdGroupsPath}");
-                    var adRepo = new ActiveDirectoryRepository(logger);
+                    var adRepo = new ActiveDirectoryRepository(logger, new CachedAdQueryStrategy(new Dictionary<string, List<string>>(), logger));
                     adRepo.LoadGroupDataFromFile(cachedAdGroupsPath);
                     adRepo.LoadUserDataFromFile(cachedAdMembersPath);
 
@@ -235,9 +236,7 @@ namespace SecureLens
                     Console.WriteLine("\n=== Data Fetched ===");
 
                     // Combine everything into CompletedUser list
-                    // AD repository (live AD or no AD?), 
-                    // For demo just instantiate, but no file loading if purely online
-                    var adRepo = new ActiveDirectoryRepository(loggerOnline);
+                    var adRepo = RepositoryFactory.CreateActiveDirectoryRepository(logger, useLiveData: mode == "online");
 
                     var dataHandler = new DataHandler(auditLogs, inventory, adRepo, loggerOnline);
                     List<CompletedUser> completedUsers = dataHandler.BuildCompletedUsers();
@@ -251,7 +250,7 @@ namespace SecureLens
 
                     // Compute everything
                     var overallStats = analyzer.ComputeOverallStatistics();
-                    var unusedGroups = analyzer.ComputeUnusedAdGroups(adRepo); // pass IActiveDirectoryRepository
+                    var unusedGroups = analyzer.ComputeUnusedAdGroups(adRepo); 
                     var appStats = analyzer.ComputeApplicationStatistics();
                     List<Analyzer.TerminalStatisticsRow> terminalStats = analyzer.ComputeTerminalStatistics();
 
