@@ -1,9 +1,17 @@
-﻿namespace SecureLens
+﻿using System.Net.Http.Headers;
+using SecureLens.Data;
+using SecureLens.Logging;
+using SecureLens.Models;
+using SecureLens.Services;
+
+namespace SecureLens
 {
     class Program
     {
         static async Task Main(string[] args)
         {
+            var logger = new ConsoleLogger();
+
             var auditParams = new Dictionary<string, string>
             {
                 { "take", "1000" }, // Adjust as needed
@@ -55,12 +63,15 @@
 
                 try
                 {
-                    var client = new AdminByRequestClient("");
+                    // Opret ABR repository + service
+                    var abrRepo = new AdminByRequestRepository("", logger);
+                    var abrService = new AdminByRequestService(abrRepo);
+
                     foreach (var entry in settingsGroups)
                     {
                         string settingName = entry.Key;
                         List<string> activeDirectoryGroups = entry.Value;
-                        client.CreateSetting(settingName, activeDirectoryGroups);
+                        abrService.CreateSetting(settingName, activeDirectoryGroups);
                         Console.WriteLine($"Created setting: {settingName} containing {activeDirectoryGroups.Count} AD-groups");
                     }
 
@@ -72,24 +83,23 @@
 
                     // Load Cached Inventory
                     Console.WriteLine($"Loading cached inventory data from file: {cachedInventoryPath}");
-                    List<InventoryLogEntry> inventory = client.LoadCachedInventoryData(cachedInventoryPath);
+                    List<InventoryLogEntry> inventory = abrRepo.LoadCachedInventoryData(cachedInventoryPath);
                     Console.WriteLine($"Loaded {inventory.Count} cached inventory records.");
 
                     // Load Cached Audit Logs
                     Console.WriteLine($"Loading cached audit logs from file: {cachedAuditLogsPath}");
-                    List<AuditLogEntry> auditLogs = client.LoadCachedAuditLogs(cachedAuditLogsPath);
+                    List<AuditLogEntry> auditLogs = abrRepo.LoadCachedAuditLogs(cachedAuditLogsPath);
                     Console.WriteLine($"Loaded {auditLogs.Count} cached audit log records.");
 
                     // Load AD cache data
                     Console.WriteLine($"Loading cached Active Directory groups from {cachedAdGroupsPath}");
-                    var adClient = new ActiveDirectoryClient();
-                    adClient.LoadCachedGroupData(cachedAdGroupsPath);
-                    
-                    adClient.LoadCachedAdData(cachedAdMembersPath);
+                    var adRepo = new ActiveDirectoryRepository(logger);
+                    adRepo.LoadGroupDataFromFile(cachedAdGroupsPath);
+                    adRepo.LoadUserDataFromFile(cachedAdMembersPath);
 
                     // Combine everything into CompletedUser list
                     Console.WriteLine("Building Completed Users to prepare analysis...");
-                    var dataHandler = new DataHandler(auditLogs, inventory, adClient);
+                    var dataHandler = new DataHandler(auditLogs, inventory, adRepo, logger);
                     List<CompletedUser> completedUsers = dataHandler.BuildCompletedUsers();
 
                     Console.ForegroundColor = ConsoleColor.Green;
@@ -101,7 +111,7 @@
 
                     // Compute everything
                     var overallStats = analyzer.ComputeOverallStatistics();
-                    var unusedGroups = analyzer.ComputeUnusedAdGroups(adClient);
+                    var unusedGroups = analyzer.ComputeUnusedAdGroups(adRepo);  // <<< Instead of adClient
                     var appStats = analyzer.ComputeApplicationStatistics();
                     List<Analyzer.TerminalStatisticsRow> terminalStats = analyzer.ComputeTerminalStatistics();
 
@@ -188,11 +198,12 @@
                 char[] finalApiKeyChars = apiKeyString.ToCharArray();
                 try
                 {
-                    var client = new AdminByRequestClient(apiKeyString);
-
+                    var loggerOnline = new ConsoleLogger();
+                    var abrRepo = new AdminByRequestRepository(apiKeyString, loggerOnline);
+                    
                     // Fetch Inventory Data (online)
                     Console.WriteLine("=== Inventory Data ===");
-                    List<InventoryLogEntry> inventory = await client.FetchInventoryDataAsync();
+                    List<InventoryLogEntry> inventory = await abrRepo.FetchInventoryDataAsync();
                     if (inventory.Count > 0)
                     {
                         Console.WriteLine($"Fetched {inventory.Count} inventory logs (online).");
@@ -204,7 +215,7 @@
 
                     // Fetch Audit Logs (online)
                     Console.WriteLine("\n=== Audit Logs ===");
-                    List<AuditLogEntry> auditLogs = await client.FetchAuditLogsAsync(auditParams);
+                    List<AuditLogEntry> auditLogs = await abrRepo.FetchAuditLogsAsync(auditParams);
                     if (auditLogs.Count > 0)
                     {
                         Console.WriteLine($"Fetched {auditLogs.Count} audit logs (online).");
@@ -224,8 +235,11 @@
                     Console.WriteLine("\n=== Data Fetched ===");
 
                     // Combine everything into CompletedUser list
-                    var adClient = new ActiveDirectoryClient();
-                    var dataHandler = new DataHandler(auditLogs, inventory, adClient);
+                    // AD repository (live AD or no AD?), 
+                    // For demo just instantiate, but no file loading if purely online
+                    var adRepo = new ActiveDirectoryRepository(loggerOnline);
+
+                    var dataHandler = new DataHandler(auditLogs, inventory, adRepo, loggerOnline);
                     List<CompletedUser> completedUsers = dataHandler.BuildCompletedUsers();
 
                     Console.ForegroundColor = ConsoleColor.Green;
@@ -237,7 +251,7 @@
 
                     // Compute everything
                     var overallStats = analyzer.ComputeOverallStatistics();
-                    var unusedGroups = analyzer.ComputeUnusedAdGroups(adClient);
+                    var unusedGroups = analyzer.ComputeUnusedAdGroups(adRepo); // pass IActiveDirectoryRepository
                     var appStats = analyzer.ComputeApplicationStatistics();
                     List<Analyzer.TerminalStatisticsRow> terminalStats = analyzer.ComputeTerminalStatistics();
 
