@@ -48,32 +48,32 @@ jobs:
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v2
 
-      - name: Azure CLI Login
-        env:
-          AZURE_USERNAME: ${{ secrets.AZURE_USERNAME }}
-          AZURE_PASSWORD: ${{ secrets.AZURE_PASSWORD }}
-        run: az login -u "$AZURE_USERNAME" -p "$AZURE_PASSWORD"
+      #- name: Azure CLI Login
+       # env:
+       #   AZURE_USERNAME: ${{ secrets.AZURE_USERNAME }}
+       #   AZURE_PASSWORD: ${{ secrets.AZURE_PASSWORD }}
+        #run: az login -u "$AZURE_USERNAME" -p "$AZURE_PASSWORD"
 
-      - name: Set Azure Subscription
-        run: az account set --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      #- name: Set Azure Subscription
+      #  run: az account set --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Terraform Init
-        run: terraform -chdir=./infrastructure init
+      #- name: Terraform Init
+      #  run: terraform -chdir=./infrastructure init
 
-      - name: Terraform Plan & Apply
-        env:
-          TF_VAR_admin_username: ${{ secrets.TERRAFORM_ADMIN_USERNAME }}
-          TF_VAR_admin_password: ${{ secrets.TERRAFORM_ADMIN_PASSWORD }}
-          TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          TF_VAR_source_address: ${{ secrets.AZURE_SOURCE_IP }}
-          TF_VAR_domain_admin_username: ${{ secrets.TERRAFORM_DOMAIN_ADMIN_USERNAME }}
-          TF_VAR_domain_admin_password: ${{ secrets.TERRAFORM_DOMAIN_ADMIN_PASSWORD }}
-          TF_VAR_safe_mode_password: ${{ secrets.TERRAFORM_SAFE_MODE_PASSWORD }}
-          TF_VAR_domain_name: ${{ secrets.TERRAFORM_DOMAIN_NAME }}
-          TF_VAR_domain_netbios_name: ${{ secrets.TERRAFORM_DOMAIN_NETBIOS_NAME }}
-          TF_VAR_user_name: ${{ secrets.TERRAFORM_TEST_USERNAME }}
-          TF_VAR_user_password: ${{ secrets.TERRAFORM_TEST_PASSWORD }}
-          TF_VAR_group_name: ${{ secrets.TERRAFORM_GROUP_NAME }}
-        run: |
-          terraform -chdir=./infrastructure plan
-          terraform -chdir=./infrastructure apply -auto-approve
+      #- name: Terraform Plan & Apply
+      #  env:
+      #    TF_VAR_admin_username: ${{ secrets.TERRAFORM_ADMIN_USERNAME }}
+      #    TF_VAR_admin_password: ${{ secrets.TERRAFORM_ADMIN_PASSWORD }}
+      #    TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      #    TF_VAR_source_address: ${{ secrets.AZURE_SOURCE_IP }}
+      #    TF_VAR_domain_admin_username: ${{ secrets.TERRAFORM_DOMAIN_ADMIN_USERNAME }}
+      #    TF_VAR_domain_admin_password: ${{ secrets.TERRAFORM_DOMAIN_ADMIN_PASSWORD }}
+      #    TF_VAR_safe_mode_password: ${{ secrets.TERRAFORM_SAFE_MODE_PASSWORD }}
+      #    TF_VAR_domain_name: ${{ secrets.TERRAFORM_DOMAIN_NAME }}
+      #    TF_VAR_domain_netbios_name: ${{ secrets.TERRAFORM_DOMAIN_NETBIOS_NAME }}
+      #    TF_VAR_user_name: ${{ secrets.TERRAFORM_TEST_USERNAME }}
+      #    TF_VAR_user_password: ${{ secrets.TERRAFORM_TEST_PASSWORD }}
+      #    TF_VAR_group_name: ${{ secrets.TERRAFORM_GROUP_NAME }}
+      #  run: |
+      #   terraform -chdir=./infrastructure plan
+      #    terraform -chdir=./infrastructure apply -auto-approve
