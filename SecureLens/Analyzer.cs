@@ -1,4 +1,6 @@
-﻿namespace SecureLens
+﻿using SecureLens.Models;
+
+namespace SecureLens
 {
     public class Analyzer
     {
@@ -383,13 +385,13 @@
 
                 var row = new TerminalStatisticsRow
                 {
-                    User = user.AccountName, // or a friendlier name if available
+                    User = user.AccountName,
                     Applications = applicationsStr,
                     Count = totalCount,
                     Department = userDepartments[user.AccountName],
                     Title = userTitles[user.AccountName],
                     SettingsUsed = settingsUsed,
-                    Types = "Run As Admin",  // or some combined label if needed
+                    Types = "Run As Admin",
                     SourceADGroups = sourceAdGroups
                 };
                 result.Add(row);
@@ -399,10 +401,6 @@
             return result.OrderByDescending(r => r.Count).ToList();
         }
 
-        /// <summary>
-        /// Checks if the given appName is recognized as a "terminal" application
-        /// according to KnownTerminalApps.
-        /// </summary>
         private bool IsTerminalApp(string appName)
         {
             return KnownTerminalApps.Contains(appName.Trim());
@@ -412,12 +410,12 @@
 
         #region UnusedAdGroups
 
-        public List<UnusedAdGroupResult> ComputeUnusedAdGroups(ActiveDirectoryClient adClient)
+        public List<UnusedAdGroupResult> ComputeUnusedAdGroups(IActiveDirectoryRepository adRepo)
         {
             var results = new List<UnusedAdGroupResult>();
 
-            if (adClient == null)
-                throw new ArgumentNullException(nameof(adClient), "ActiveDirectoryClient is null. Cannot compute unused AD groups.");
+            if (adRepo == null)
+                throw new ArgumentNullException(nameof(adRepo), "ActiveDirectoryRepository is null. Cannot compute unused AD groups.");
 
             var usedGroups = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var userToGroups = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
@@ -457,7 +455,7 @@
                 {
                     if (!usedGroups.Contains(groupName))
                     {
-                        var members = adClient.QueryAdGroupFromCache(groupName);
+                        var members = adRepo.QueryAdGroup(groupName);
                         int numberOfUsers = members.Count;
 
                         results.Add(new UnusedAdGroupResult

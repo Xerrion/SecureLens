@@ -1,4 +1,8 @@
-﻿namespace SecureLens
+﻿using SecureLens.Data;
+using SecureLens.Logging;
+using SecureLens.Models;
+
+namespace SecureLens
 {
     /// <summary>
     /// DataHandler merges all data sources (AuditLogs, InventoryLogs, and AD data) 
@@ -8,7 +12,8 @@
     {
         private readonly List<AuditLogEntry> _auditLogs;
         private readonly List<InventoryLogEntry> _inventoryLogs;
-        private readonly ActiveDirectoryClient _adClient;
+        private readonly IActiveDirectoryRepository _adRepo;
+        private readonly ILogger _logger;
 
         // Dictionary of CompletedUser objects keyed by normalized user account
         private readonly Dictionary<string, CompletedUser> _completedUsers;
@@ -16,11 +21,13 @@
         public DataHandler(
             List<AuditLogEntry> auditLogs,
             List<InventoryLogEntry> inventoryLogs,
-            ActiveDirectoryClient adClient)
+            IActiveDirectoryRepository adRepo,
+            ILogger logger)
         {
             _auditLogs = auditLogs ?? new List<AuditLogEntry>();
             _inventoryLogs = inventoryLogs ?? new List<InventoryLogEntry>();
-            _adClient = adClient;
+            _adRepo = adRepo;
+            _logger = logger;
             _completedUsers = new Dictionary<string, CompletedUser>(StringComparer.OrdinalIgnoreCase);
         }
 
@@ -65,20 +72,20 @@
                 _completedUsers[normalizedAccount].AddInventoryLogEntry(invEntry);
             }
 
-            // 3) Attach AD data if _adClient is available
-            if (_adClient != null)
+            // 3) Attach AD data if _adRepo is available
+            if (_adRepo != null)
             {
                 foreach (var kvp in _completedUsers)
                 {
                     string normalizedAccount = kvp.Key;  // e.g. "user0192"
-                    ActiveDirectoryUser adUser = _adClient.GetAdUserFromCache(normalizedAccount);
+                    ActiveDirectoryUser adUser = _adRepo.GetAdUserFromFile(normalizedAccount);
                     if (adUser != null)
                     {
                         kvp.Value.ActiveDirectoryUser = adUser;
                     }
                 }
             }
-            return new List<CompletedUser>(_completedUsers.Values);
+            return _completedUsers.Values.ToList();
         }
 
         /// <summary>

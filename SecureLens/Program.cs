@@ -1,295 +1,46 @@
-﻿namespace SecureLens
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
+using SecureLens.Logging;
+using SecureLens.Services;
+using SecureLens.UI;
+using SecureLens.Factories;
+using System.IO;
+
+namespace SecureLens
 {
     class Program
     {
         static async Task Main(string[] args)
         {
-            var auditParams = new Dictionary<string, string>
+            // Build configuration
+            var configuration = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+                .AddJsonFile("adminbyrequestsettings.json", optional: true, reloadOnChange: true)
+                .Build();
+
+            // Setup DI
+            var serviceProvider = new ServiceCollection()
+                .AddSingleton<IConfiguration>(configuration)
+                .AddSingleton<ILogger, ConsoleLogger>()
+                .AddSingleton<UserInterface>()
+                .AddSingleton<SettingsManager>()
+                .AddSingleton(sp => 
+                {
+                    var settingsManager = sp.GetRequiredService<SettingsManager>();
+                    return settingsManager.InitializeSettings();
+                }) 
+                .AddTransient<CacheModeHandler>()
+                .AddSingleton<ModeHandlerFactory>()
+                .AddSingleton<ApplicationRunner>()
+                .BuildServiceProvider();
+
+            // Resolve ApplicationRunner and run
+            var runner = serviceProvider.GetService<ApplicationRunner>();
+            if (runner != null)
             {
-                { "take", "1000" }, // Adjust as needed
-                { "wantscandetails", "1" },
-                { "startdate", "2023-01-01" },
-                { "enddate", "2025-12-31" },
-                { "status", "Finished" },
-                { "type", "app" }
-            };
-
-            // Hardcoded settings groups for developer cache mode - anonymized data
-            Dictionary<string, List<string>> settingsGroups = new Dictionary<string, List<string>>
-            {
-                { "Technology", new List<string> { "Technology" } },
-                {
-                    "Elevate Terminal Rights", new List<string>
-                    {
-                        "Technology", "Servicedesk", "Tooling", "Cloud Developer", "Infrastructure",
-                        "Production Support", "Cloud Admin", "Content Technology", "Data Science",
-                        "Developers", "Access Management", "Ad & Sales", "Business Services", "Content Metadata", "Management",
-                        "Entertainment", "Economics", "Finance"
-                    }
-                },
-                {
-                    "Global", new List<string>
-                    {
-                        "Journalism", "Sport", "Graphical Designer",  
-                        "Advertisement", "HR", "Legal", "Marketing"
-                    }
-                }
-            };
-            
-            // Convert settingsGroups dictionary to a list of AdminByRequestSetting
-            var mySettings = settingsGroups
-                .Select(kv => new AdminByRequestSetting(kv.Key, kv.Value))
-                .ToList();
-
-            Console.WriteLine("=== SecureLens Console Application ===");
-
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.Write("Choose 'cache' or 'online': ");
-            Console.ResetColor();
-            
-            string mode = Console.ReadLine()?.Trim().ToLower();
-
-            if (mode == "cache")
-            {
-                Console.WriteLine("You have chosen 'cache' mode. Loading from local JSON...");
-
-                try
-                {
-                    var client = new AdminByRequestClient("");
-                    foreach (var entry in settingsGroups)
-                    {
-                        string settingName = entry.Key;
-                        List<string> activeDirectoryGroups = entry.Value;
-                        client.CreateSetting(settingName, activeDirectoryGroups);
-                        Console.WriteLine($"Created setting: {settingName} containing {activeDirectoryGroups.Count} AD-groups");
-                    }
-
-                    // Paths cached JSON files
-                    string cachedInventoryPath  = @"../../../../MockData/cached_inventory.json";
-                    string cachedAuditLogsPath  = @"../../../../MockData/cached_auditlogs.json";
-                    string cachedAdGroupsPath   = @"../../../../MockData/cached_adgroup_queries.json";
-                    string cachedAdMembersPath  = @"../../../../MockData/cached_admember_queries.json";
-
-                    // Load Cached Inventory
-                    Console.WriteLine($"Loading cached inventory data from file: {cachedInventoryPath}");
-                    List<InventoryLogEntry> inventory = client.LoadCachedInventoryData(cachedInventoryPath);
-                    Console.WriteLine($"Loaded {inventory.Count} cached inventory records.");
-
-                    // Load Cached Audit Logs
-                    Console.WriteLine($"Loading cached audit logs from file: {cachedAuditLogsPath}");
-                    List<AuditLogEntry> auditLogs = client.LoadCachedAuditLogs(cachedAuditLogsPath);
-                    Console.WriteLine($"Loaded {auditLogs.Count} cached audit log records.");
-
-                    // Load AD cache data
-                    Console.WriteLine($"Loading cached Active Directory groups from {cachedAdGroupsPath}");
-                    var adClient = new ActiveDirectoryClient();
-                    adClient.LoadCachedGroupData(cachedAdGroupsPath);
-                    
-                    adClient.LoadCachedAdData(cachedAdMembersPath);
-
-                    // Combine everything into CompletedUser list
-                    Console.WriteLine("Building Completed Users to prepare analysis...");
-                    var dataHandler = new DataHandler(auditLogs, inventory, adClient);
-                    List<CompletedUser> completedUsers = dataHandler.BuildCompletedUsers();
-
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine($"[CACHE] Built {completedUsers.Count} CompletedUsers from the data.");
-                    Console.ResetColor();
-                    
-                    // Initialize Analyzer with CompletedUsers and Settings
-                    var analyzer = new Analyzer(completedUsers, mySettings);
-
-                    // Compute everything
-                    var overallStats = analyzer.ComputeOverallStatistics();
-                    var unusedGroups = analyzer.ComputeUnusedAdGroups(adClient);
-                    var appStats = analyzer.ComputeApplicationStatistics();
-                    List<Analyzer.TerminalStatisticsRow> terminalStats = analyzer.ComputeTerminalStatistics();
-
-                    // Generate HTML report
-                    var htmlWriter = new HtmlReportWriter();
-                    string htmlContent = htmlWriter.BuildHtmlReport(
-                        overallStats,
-                        appStats,
-                        terminalStats,
-                        unusedGroups,
-                        mySettings
-                    );
-
-                    // Write to local file
-                    string outputHtmlFile = @"C:\Users\jeppe\Desktop\report.html";
-                    File.WriteAllText(outputHtmlFile, htmlContent);
-                    Console.WriteLine($"[INFO] HTML report successfully written to '{outputHtmlFile}'.");
-                }
-                catch (ArgumentNullException ex)
-                {
-                    // Handle specific exceptions from Analyzer or other classes
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"Error: {ex.Message}");
-                    Console.ResetColor();
-                }
-                catch (Exception ex)
-                {
-                    // Handle any unexpected exceptions
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"An unexpected error occurred: {ex.Message}");
-                    Console.ResetColor();
-                }
+                await runner.RunAsync();
             }
-            else if (mode == "online")
-            {
-                Console.WriteLine("You have chosen 'online' mode.");
-
-                string apiKeyString = string.Empty;
-                bool isValid = false;
-
-                // Loop until a valid API key is entered
-                do
-                {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.Write("Please enter your API key: ");
-                    Console.ResetColor();
-
-                    List<char> keyChars = new List<char>();
-                    ConsoleKeyInfo keyInfo;
-
-                    // Read input character-by-character without displaying it
-                    do
-                    {
-                        keyInfo = Console.ReadKey(true);
-                        if (!char.IsControl(keyInfo.KeyChar))
-                        {
-                            keyChars.Add(keyInfo.KeyChar);
-                            Console.Write("*"); // Mask the input
-                        }
-                        else if (keyInfo.Key == ConsoleKey.Backspace && keyChars.Count > 0)
-                        {
-                            keyChars.RemoveAt(keyChars.Count - 1);
-                            Console.Write("\b \b");
-                        }
-                    } while (keyInfo.Key != ConsoleKey.Enter);
-
-                    Console.WriteLine(); // Move to the next line after input
-
-                    char[] apiKeyArray = keyChars.ToArray();
-                    apiKeyString = new string(apiKeyArray);
-
-                    // Validate the API key
-                    isValid = ApiKeyValidator.IsValid(apiKeyString);
-
-                    if (!isValid)
-                    {
-                        Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine("Invalid API key format. Please try again.");
-                        Console.ResetColor();
-                    }
-                } while (!isValid);
-
-                // Proceed with the valid API key
-                char[] finalApiKeyChars = apiKeyString.ToCharArray();
-                try
-                {
-                    var client = new AdminByRequestClient(apiKeyString);
-
-                    // Fetch Inventory Data (online)
-                    Console.WriteLine("=== Inventory Data ===");
-                    List<InventoryLogEntry> inventory = await client.FetchInventoryDataAsync();
-                    if (inventory.Count > 0)
-                    {
-                        Console.WriteLine($"Fetched {inventory.Count} inventory logs (online).");
-                    }
-                    else
-                    {
-                        Console.WriteLine("No inventory data fetched (online).");
-                    }
-
-                    // Fetch Audit Logs (online)
-                    Console.WriteLine("\n=== Audit Logs ===");
-                    List<AuditLogEntry> auditLogs = await client.FetchAuditLogsAsync(auditParams);
-                    if (auditLogs.Count > 0)
-                    {
-                        Console.WriteLine($"Fetched {auditLogs.Count} audit logs (online).");
-                    }
-                    else
-                    {
-                        Console.WriteLine("No audit log data fetched (online).");
-                    }
-
-                    // Overwrite the API key in memory for security
-                    for (int i = 0; i < finalApiKeyChars.Length; i++)
-                    {
-                        finalApiKeyChars[i] = '\0';
-                    }
-                    apiKeyString = null;
-
-                    Console.WriteLine("\n=== Data Fetched ===");
-
-                    // Combine everything into CompletedUser list
-                    var adClient = new ActiveDirectoryClient();
-                    var dataHandler = new DataHandler(auditLogs, inventory, adClient);
-                    List<CompletedUser> completedUsers = dataHandler.BuildCompletedUsers();
-
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine($"[ONLINE] Built {completedUsers.Count} CompletedUsers from the data.");
-                    Console.ResetColor();
-
-                    // Initialize Analyzer with CompletedUsers and Settings
-                    var analyzer = new Analyzer(completedUsers, mySettings);
-
-                    // Compute everything
-                    var overallStats = analyzer.ComputeOverallStatistics();
-                    var unusedGroups = analyzer.ComputeUnusedAdGroups(adClient);
-                    var appStats = analyzer.ComputeApplicationStatistics();
-                    List<Analyzer.TerminalStatisticsRow> terminalStats = analyzer.ComputeTerminalStatistics();
-
-                    // Generate HTML report
-                    var htmlWriter = new HtmlReportWriter();
-                    string htmlContent = htmlWriter.BuildHtmlReport(
-                        overallStats,
-                        appStats,
-                        terminalStats,
-                        unusedGroups,
-                        mySettings
-                    );
-
-                    // Write to local file
-                    string outputHtmlFile = @"C:\Users\jeppe\Desktop\report.html";
-                    File.WriteAllText(outputHtmlFile, htmlContent);
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine($"[INFO] HTML report successfully written to '{outputHtmlFile}'.");
-                    Console.ResetColor();
-                }
-                catch (ArgumentNullException ex)
-                {
-                    // Handle specific exceptions from Analyzer or other classes
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"Error: {ex.Message}");
-                    Console.ResetColor();
-                }
-                catch (Exception ex)
-                {
-                    // Handle any unexpected exceptions
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"An unexpected error occurred: {ex.Message}");
-                    Console.ResetColor();
-                }
-                finally
-                {
-                    // Overwrite the API key in memory for security in case of exceptions
-                    for (int i = 0; i < finalApiKeyChars.Length; i++)
-                    {
-                        finalApiKeyChars[i] = '\0';
-                    }
-                    apiKeyString = null;
-                }
-            }
-            else
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("Invalid mode selected. Please choose 'cache' or 'online'.");
-                Console.ResetColor();
-            }
-
-            Console.WriteLine("\n=== Program Finished ===");
         }
     }
 }
