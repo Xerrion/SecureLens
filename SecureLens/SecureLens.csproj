@@ -14,12 +14,16 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <None Update="appsettings.json">
+    <None Update="config\appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="adminbyrequestsettings.json">
+    <None Update="config\adminbyrequestsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="src\Core\Interfaces\" />
   </ItemGroup>
 
 </Project>

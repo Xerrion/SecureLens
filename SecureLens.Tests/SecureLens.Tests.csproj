@@ -26,4 +26,11 @@
     <ProjectReference Include="..\SecureLens\SecureLens.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Application\" />
+    <Folder Include="Core\" />
+    <Folder Include="Infrastructure\" />
+    <Folder Include="UI\" />
+  </ItemGroup>
+
 </Project>
