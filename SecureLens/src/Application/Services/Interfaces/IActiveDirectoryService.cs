@@ -4,5 +4,5 @@ namespace SecureLens.Application.Services.Interfaces;
 
 public interface IActiveDirectoryService
 {
-    List<ActiveDirectoryUser> GetAllUsersCreatedWithinLastMonth();
+    public List<ActiveDirectoryUser> GetAllUsersCreatedWithinLastMonth();
 }

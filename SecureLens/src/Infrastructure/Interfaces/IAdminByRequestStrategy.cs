@@ -4,6 +4,9 @@ namespace SecureLens.Infrastructure.Interfaces;
 
 public interface IAdminByRequestStrategy
 {
-    Task<List<InventoryLogEntry>> FetchInventoryDataAsync(string inventoryUrl, Dictionary<string, string> headers);
-    Task<List<AuditLogEntry>> FetchAuditLogsAsync(string auditUrl, Dictionary<string, string> headers, Dictionary<string, string> parameters);
+    public Task<List<InventoryLogEntry>> FetchInventoryDataAsync(string inventoryUrl,
+        Dictionary<string, string> headers);
+
+    public Task<List<AuditLogEntry>> FetchAuditLogsAsync(string auditUrl, Dictionary<string, string> headers,
+        Dictionary<string, string> parameters);
 }

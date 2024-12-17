@@ -1,23 +1,22 @@
 ﻿using Microsoft.Extensions.Configuration;
 
-namespace SecureLens.Core.Models
+namespace SecureLens.Core.Models;
+
+public class SettingsManager
 {
-    public class SettingsManager
+    private readonly IConfiguration _configuration;
+
+    public SettingsManager(IConfiguration configuration)
     {
-        private readonly IConfiguration _configuration;
+        _configuration = configuration;
+    }
 
-        public SettingsManager(IConfiguration configuration)
-        {
-            _configuration = configuration;
-        }
+    public List<AdminByRequestSetting> InitializeSettings()
+    {
+        // Bind settings from appsettings.json
+        List<AdminByRequestSetting>? settings = _configuration.GetSection("AdminByRequestSettings")
+            .Get<List<AdminByRequestSetting>>();
 
-        public List<AdminByRequestSetting> InitializeSettings()
-        {
-            // Bind settings from appsettings.json
-            var settings = _configuration.GetSection("AdminByRequestSettings")
-                .Get<List<AdminByRequestSetting>>();
-            
-            return settings ?? new List<AdminByRequestSetting>();
-        }
+        return settings ?? new List<AdminByRequestSetting>();
     }
 }

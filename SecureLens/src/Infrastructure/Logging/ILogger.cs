@@ -1,9 +1,8 @@
-﻿namespace SecureLens.Infrastructure.Logging
+﻿namespace SecureLens.Infrastructure.Logging;
+
+public interface ILogger
 {
-    public interface ILogger
-    {
-        void LogInfo(string message);
-        void LogWarning(string message);
-        void LogError(string message);
-    }
+    public void LogInfo(string message);
+    public void LogWarning(string message);
+    public void LogError(string message);
 }

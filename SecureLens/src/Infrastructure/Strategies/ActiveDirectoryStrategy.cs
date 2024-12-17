@@ -3,84 +3,78 @@ using System.Text;
 using SecureLens.Infrastructure.Interfaces;
 using SecureLens.Infrastructure.Logging;
 
-namespace SecureLens.Infrastructure.Strategies
+namespace SecureLens.Infrastructure.Strategies;
+
+public class ActiveDirectoryStrategy : IActiveDirectoryStrategy
 {
-    public class ActiveDirectoryStrategy : IActiveDirectoryStrategy
+    private readonly ILogger _logger;
+
+    public ActiveDirectoryStrategy(ILogger logger)
     {
-        private readonly ILogger _logger;
+        _logger = logger;
+    }
 
-        public ActiveDirectoryStrategy(ILogger logger)
+    public List<string> QueryAdGroup(string groupName)
+    {
+        try
         {
-            _logger = logger;
-        }
+            var cmd =
+                $@"Get-ADGroupMember -Identity ""{groupName}"" -Recursive | Select-Object -ExpandProperty SamAccountName";
 
-        public List<string> QueryAdGroup(string groupName)
-        {
-            try
+            var psi = new ProcessStartInfo
             {
-                var cmd = $@"Get-ADGroupMember -Identity ""{groupName}"" -Recursive | Select-Object -ExpandProperty SamAccountName";
+                FileName = "powershell",
+                Arguments = "-NoProfile -Command \"" + cmd + "\"",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                StandardOutputEncoding = Encoding.UTF8
+            };
 
-                var psi = new ProcessStartInfo
-                {
-                    FileName = "powershell",
-                    Arguments = "-NoProfile -Command \"" + cmd + "\"",
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    StandardOutputEncoding = Encoding.UTF8
-                };
+            using var proc = new Process();
+            proc.StartInfo = psi;
+            proc.Start();
 
-                using var proc = new Process() { StartInfo = psi };
-                proc.Start();
+            var stdout = proc.StandardOutput.ReadToEnd();
+            var stderr = proc.StandardError.ReadToEnd();
+            proc.WaitForExit();
 
-                string stdout = proc.StandardOutput.ReadToEnd();
-                string stderr = proc.StandardError.ReadToEnd();
-                proc.WaitForExit();
-
-                if (!string.IsNullOrWhiteSpace(stdout))
-                {
-                    var lines = stdout.Trim().Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-                    return lines.ToList();
-                }
-                else
-                {
-                    string errorMsg = stderr.Trim();
-                    if (errorMsg.Contains("Cannot find an object with identity", StringComparison.OrdinalIgnoreCase))
-                    {
-                        _logger.LogWarning($"AD group '{groupName}' not found in AD.");
-                    }
-                    else
-                    {
-                        _logger.LogError($"Failed to get AD group details for '{groupName}'. Error: {errorMsg}");
-                    }
-                    return new List<string>();
-                }
+            if (!string.IsNullOrWhiteSpace(stdout))
+            {
+                var lines = stdout.Trim().Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                return lines.ToList();
             }
-            catch (Exception e)
+            else
             {
-                _logger.LogError($"Error querying AD group '{groupName}': {e}");
+                var errorMsg = stderr.Trim();
+                if (errorMsg.Contains("Cannot find an object with identity", StringComparison.OrdinalIgnoreCase))
+                    _logger.LogWarning($"AD group '{groupName}' not found in AD.");
+                else
+                    _logger.LogError($"Failed to get AD group details for '{groupName}'. Error: {errorMsg}");
                 return new List<string>();
             }
         }
-
-        public HashSet<string> QueryAdGroupMembers(IEnumerable<string> groupNames)
+        catch (Exception e)
         {
-            var allMembers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            int groupsNotFound = 0;
-
-            foreach (var group in groupNames)
-            {
-                var members = QueryAdGroup(group);
-                if (members.Count == 0) groupsNotFound++;
-                foreach (var m in members) allMembers.Add(m);
-            }
-
-            if (groupsNotFound > 0)
-            {
-                _logger.LogWarning($"{groupsNotFound} groups not found or had errors.");
-            }
-            return allMembers;
+            _logger.LogError($"Error querying AD group '{groupName}': {e}");
+            return new List<string>();
         }
+    }
+
+    public HashSet<string> QueryAdGroupMembers(IEnumerable<string> groupNames)
+    {
+        var allMembers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var groupsNotFound = 0;
+
+        foreach (var group in groupNames)
+        {
+            List<string>? members = QueryAdGroup(group);
+            if (members.Count == 0) groupsNotFound++;
+            foreach (var m in members) allMembers.Add(m);
+        }
+
+        if (groupsNotFound > 0) _logger.LogWarning($"{groupsNotFound} groups not found or had errors.");
+        return allMembers;
     }
 }

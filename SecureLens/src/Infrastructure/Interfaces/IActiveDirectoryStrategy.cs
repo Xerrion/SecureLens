@@ -2,6 +2,6 @@
 
 public interface IActiveDirectoryStrategy
 {
-    List<string> QueryAdGroup(string groupName);
-    HashSet<string> QueryAdGroupMembers(IEnumerable<string> groupNames);
+    public List<string> QueryAdGroup(string groupName);
+    public HashSet<string> QueryAdGroupMembers(IEnumerable<string> groupNames);
 }

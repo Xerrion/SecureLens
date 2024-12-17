@@ -1,27 +1,27 @@
 ﻿using Newtonsoft.Json;
 using SecureLens.Infrastructure.Logging;
 
-namespace SecureLens.Infrastructure.Utilities
+namespace SecureLens.Infrastructure.Utilities;
+
+public static class JsonHelper
 {
-    public static class JsonHelper
+    public static T? LoadJsonFile<T>(string filePath, ILogger? logger = null)
     {
-        public static T? LoadJsonFile<T>(string filePath, ILogger? logger = null)
+        try
         {
-            try
+            if (!File.Exists(filePath))
             {
-                if (!File.Exists(filePath))
-                {
-                    logger?.LogError($"File not found: {filePath}");
-                    return default;
-                }
-                var json = File.ReadAllText(filePath);
-                return JsonConvert.DeserializeObject<T>(json);
-            }
-            catch (Exception ex)
-            {
-                logger?.LogError($"Error deserializing JSON from {filePath}: {ex.Message}");
+                logger?.LogError($"File not found: {filePath}");
                 return default;
             }
+
+            var json = File.ReadAllText(filePath);
+            return JsonConvert.DeserializeObject<T>(json);
+        }
+        catch (Exception ex)
+        {
+            logger?.LogError($"Error deserializing JSON from {filePath}: {ex.Message}");
+            return default;
         }
     }
 }

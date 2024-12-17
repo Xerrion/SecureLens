@@ -4,12 +4,12 @@ namespace SecureLens.Infrastructure.Interfaces;
 
 public interface IAdminByRequestRepository
 {
-    Task<List<InventoryLogEntry>> FetchInventoryDataAsync();
-    Task<List<AuditLogEntry>> FetchAuditLogsAsync(Dictionary<string, string> @params);
+    public Task<List<InventoryLogEntry>> FetchInventoryDataAsync();
+    public Task<List<AuditLogEntry>> FetchAuditLogsAsync(Dictionary<string, string> @params);
 
-    List<InventoryLogEntry> LoadCachedInventoryData(string filePath);
-    List<AuditLogEntry> LoadCachedAuditLogs(string filePath);
-    string ApiKey { get; }
-    string BaseUrlInventory { get; }
-    string BaseUrlAudit { get; }
+    public List<InventoryLogEntry> LoadCachedInventoryData(string filePath);
+    public List<AuditLogEntry> LoadCachedAuditLogs(string filePath);
+    public string ApiKey { get; }
+    public string BaseUrlInventory { get; }
+    public string BaseUrlAudit { get; }
 }

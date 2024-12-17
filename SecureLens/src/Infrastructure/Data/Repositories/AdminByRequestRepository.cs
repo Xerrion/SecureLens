@@ -2,71 +2,70 @@
 using SecureLens.Infrastructure.Interfaces;
 using SecureLens.Infrastructure.Logging;
 
-namespace SecureLens.Infrastructure.Data.Repositories
+namespace SecureLens.Infrastructure.Data.Repositories;
+
+public class AdminByRequestRepository : BaseRepository, IAdminByRequestRepository
 {
-    public class AdminByRequestRepository : BaseRepository, IAdminByRequestRepository
+    private readonly IAdminByRequestStrategy _strategy;
+    private readonly string _baseUrlInventory;
+    private readonly string _baseUrlAudit;
+
+    public string ApiKey { get; }
+    public string BaseUrlInventory => _baseUrlInventory;
+    public string BaseUrlAudit => _baseUrlAudit;
+
+    public AdminByRequestRepository(string apiKey, ILogger logger, IAdminByRequestStrategy strategy)
+        : base(logger)
     {
-        private readonly IAdminByRequestStrategy _strategy;
-        private readonly string _baseUrlInventory;
-        private readonly string _baseUrlAudit;
+        ApiKey = apiKey;
+        _strategy = strategy;
+        _baseUrlInventory = "https://dc1api.adminbyrequest.com/inventory";
+        _baseUrlAudit = "https://dc1api.adminbyrequest.com/auditlog";
+    }
 
-        public string ApiKey { get; }
-        public string BaseUrlInventory => _baseUrlInventory;
-        public string BaseUrlAudit => _baseUrlAudit;
-
-        public AdminByRequestRepository(string apiKey, ILogger logger, IAdminByRequestStrategy strategy)
-            : base(logger)
+    public async Task<List<InventoryLogEntry>> FetchInventoryDataAsync()
+    {
+        var headers = new Dictionary<string, string>
         {
-            ApiKey = apiKey;
-            _strategy = strategy;
-            _baseUrlInventory = "https://dc1api.adminbyrequest.com/inventory";
-            _baseUrlAudit = "https://dc1api.adminbyrequest.com/auditlog";
+            { "apikey", ApiKey }
+        };
+
+        return await _strategy.FetchInventoryDataAsync(_baseUrlInventory, headers);
+    }
+
+    public async Task<List<AuditLogEntry>> FetchAuditLogsAsync(Dictionary<string, string> @params)
+    {
+        var headers = new Dictionary<string, string>
+        {
+            { "apikey", ApiKey }
+        };
+
+        return await _strategy.FetchAuditLogsAsync(_baseUrlAudit, headers, @params);
+    }
+
+    public List<InventoryLogEntry> LoadCachedInventoryData(string filePath)
+    {
+        if (_strategy is IAdminByRequestCacheStrategy cachedStrategy)
+        {
+            return cachedStrategy.LoadCachedInventoryData(filePath);
         }
-
-        public async Task<List<InventoryLogEntry>> FetchInventoryDataAsync()
+        else
         {
-            var headers = new Dictionary<string, string>
-            {
-                { "apikey", ApiKey }
-            };
-
-            return await _strategy.FetchInventoryDataAsync(_baseUrlInventory, headers);
+            Logger.LogWarning("LoadCachedInventoryData called on non-cached strategy.");
+            return new List<InventoryLogEntry>();
         }
+    }
 
-        public async Task<List<AuditLogEntry>> FetchAuditLogsAsync(Dictionary<string, string> @params)
+    public List<AuditLogEntry> LoadCachedAuditLogs(string filePath)
+    {
+        if (_strategy is IAdminByRequestCacheStrategy cachedStrategy)
         {
-            var headers = new Dictionary<string, string>
-            {
-                { "apikey", ApiKey }
-            };
-
-            return await _strategy.FetchAuditLogsAsync(_baseUrlAudit, headers, @params);
+            return cachedStrategy.LoadCachedAuditLogs(filePath);
         }
-
-        public List<InventoryLogEntry> LoadCachedInventoryData(string filePath)
+        else
         {
-            if (_strategy is IAdminByRequestCacheStrategy cachedStrategy)
-            {
-                return cachedStrategy.LoadCachedInventoryData(filePath);
-            }
-            else
-            {
-                Logger.LogWarning("LoadCachedInventoryData called on non-cached strategy.");
-                return new List<InventoryLogEntry>();
-            }
-        }
-
-        public List<AuditLogEntry> LoadCachedAuditLogs(string filePath)
-        {
-            if (_strategy is IAdminByRequestCacheStrategy cachedStrategy)
-            {
-                return cachedStrategy.LoadCachedAuditLogs(filePath);
-            }
-            else
-            {
-                Logger.LogWarning("LoadCachedAuditLogs called on non-cached strategy.");
-                return new List<AuditLogEntry>();
-            }
+            Logger.LogWarning("LoadCachedAuditLogs called on non-cached strategy.");
+            return new List<AuditLogEntry>();
         }
     }
 }

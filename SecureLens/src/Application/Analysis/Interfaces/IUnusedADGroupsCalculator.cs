@@ -6,5 +6,6 @@ namespace SecureLens.Application.Analysis.Interfaces;
 
 public interface IUnusedAdGroupsCalculator
 {
-    List<UnusedAdGroupResult> ComputeUnusedAdGroups(List<CompletedUser> completedUsers, List<AdminByRequestSetting> settings, IActiveDirectoryRepository adRepo);
+    public List<UnusedAdGroupResult> ComputeUnusedAdGroups(List<CompletedUser> completedUsers,
+        List<AdminByRequestSetting> settings, IActiveDirectoryRepository adRepo);
 }

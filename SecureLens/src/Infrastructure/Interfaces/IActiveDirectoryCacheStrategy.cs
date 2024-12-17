@@ -1,10 +1,9 @@
 ﻿using SecureLens.Core.Models;
 
-namespace SecureLens.Infrastructure.Interfaces
+namespace SecureLens.Infrastructure.Interfaces;
+
+public interface IActiveDirectoryCacheStrategy : IActiveDirectoryStrategy
 {
-    public interface IActiveDirectoryCacheStrategy : IActiveDirectoryStrategy
-    {
-        void InitializeGroupCache(Dictionary<string, List<string>> groupCache);
-        void InitializeUserCache(Dictionary<string, ActiveDirectoryUser> userCache);
-    }
+    public void InitializeGroupCache(Dictionary<string, List<string>> groupCache);
+    public void InitializeUserCache(Dictionary<string, ActiveDirectoryUser> userCache);
 }

@@ -4,9 +4,9 @@ namespace SecureLens.Infrastructure.Interfaces;
 
 public interface IActiveDirectoryRepository
 {
-    void LoadGroupDataFromFile(string filePath);
-    void LoadUserDataFromFile(string filePath);
-    List<string> QueryAdGroup(string groupName);
-    HashSet<string> QueryAdGroupMembers(IEnumerable<string> groupNames);
-    ActiveDirectoryUser GetAdUserFromFile(string userId);
+    public void LoadGroupDataFromFile(string filePath);
+    public void LoadUserDataFromFile(string filePath);
+    public List<string> QueryAdGroup(string groupName);
+    public HashSet<string> QueryAdGroupMembers(IEnumerable<string> groupNames);
+    public ActiveDirectoryUser GetAdUserFromFile(string userId);
 }

@@ -1,7 +1,6 @@
-﻿namespace SecureLens.Application.Services.Interfaces
+﻿namespace SecureLens.Application.Services.Interfaces;
+
+public interface IModeHandler
 {
-    public interface IModeHandler
-    {
-        Task ExecuteAsync();
-    }
+    public Task ExecuteAsync();
 }
