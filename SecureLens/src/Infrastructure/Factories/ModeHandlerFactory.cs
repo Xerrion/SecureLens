@@ -18,8 +18,11 @@ public class ModeHandlerFactory
         if (mode.Equals("cache", StringComparison.OrdinalIgnoreCase))
             return _serviceProvider.GetRequiredService<CacheModeHandler>();
         else if (mode.Equals("online", StringComparison.OrdinalIgnoreCase))
-            // OnlineModeHandler kræver en API-nøgle, så opret den manuelt
-            return ActivatorUtilities.CreateInstance<OnlineModeHandler>(_serviceProvider, apiKey);
+        {
+            // Convert the API key string to a char array
+            char[] apiKeyChars = apiKey.ToCharArray();
+            return ActivatorUtilities.CreateInstance<OnlineModeHandler>(_serviceProvider, apiKeyChars);
+        }
         else
             throw new ArgumentException("Invalid mode", nameof(mode));
     }

@@ -25,7 +25,7 @@ public class CacheModeHandler : IModeHandler
         ILogger logger,
         List<AdminByRequestSetting> settings,
         IConfiguration configuration,
-        Analyzer analyzer) // Injektionsparameter
+        Analyzer analyzer) // Injection parameter
     {
         _logger = logger;
         _settings = settings;
@@ -42,8 +42,8 @@ public class CacheModeHandler : IModeHandler
     {
         try
         {
-            // Opret AdminByRequestRepository i cache mode
-            var apiKey = ""; // Ingen API key i cache mode
+            // Create AdminByRequestRepository in cache mode
+            var apiKey = ""; // No API key in cache mode
             IAdminByRequestRepository abrRepo = RepositoryFactory.CreateAdminByRequestRepository(
                 apiKey,
                 _logger,
@@ -52,7 +52,7 @@ public class CacheModeHandler : IModeHandler
                 _auditCachePath
             );
 
-            // Opret ActiveDirectoryRepository i cache mode
+            // Create ActiveDirectoryRepository in cache mode
             IActiveDirectoryRepository adRepo = RepositoryFactory.CreateActiveDirectoryRepository(
                 _logger,
                 false,
@@ -69,7 +69,7 @@ public class CacheModeHandler : IModeHandler
                     $"Created setting: {setting.Name} containing {setting.ActiveDirectoryGroups.Count} AD-groups");
             }
 
-            // Kombinér data i CompletedUser liste
+            // Combine data into CompletedUser list
             _logger.LogInfo("Building Completed Users to prepare analysis...");
             var dataHandler = new DataHandler(
                 abrRepo.LoadCachedAuditLogs(_auditCachePath),
@@ -81,14 +81,14 @@ public class CacheModeHandler : IModeHandler
 
             _logger.LogInfo($"[CACHE] Built {completedUsers.Count} CompletedUsers from the data.");
 
-            // Beregn alle stats ved hjælp af den injicerede Analyzer
+            // Compute all stats using the injected Analyzer
             OverallStatisticsResult overallStats = _analyzer.ComputeOverallStatistics(completedUsers, _settings);
             List<UnusedAdGroupResult> unusedGroups = _analyzer.ComputeUnusedAdGroups(completedUsers, _settings, adRepo);
             Dictionary<string, ApplicationStatisticsResult> appStats =
                 _analyzer.ComputeApplicationStatistics(completedUsers, _settings);
             List<TerminalStatisticsRow> terminalStats = _analyzer.ComputeTerminalStatistics(completedUsers, _settings);
 
-            // Generér HTML rapport
+            // Generate HTML report
             var htmlWriter = new HtmlReportWriter();
             var htmlContent = htmlWriter.BuildHtmlReport(
                 overallStats,
@@ -98,18 +98,18 @@ public class CacheModeHandler : IModeHandler
                 _settings
             );
 
-            // Skriv til lokal fil
+            // Write to local file
             File.WriteAllText(_reportPath, htmlContent);
             _logger.LogInfo($"[INFO] HTML report successfully written to '{_reportPath}'.");
         }
         catch (ArgumentNullException ex)
         {
-            // Håndter specifikke undtagelser fra Analyzer eller andre klasser
+            // Handle specific exceptions from Analyzer or other classes
             _logger.LogError($"Error: {ex.Message}");
         }
         catch (Exception ex)
         {
-            // Håndter uventede undtagelser
+            // Handle unexpected exceptions
             _logger.LogError($"An unexpected error occurred: {ex.Message}");
         }
     }

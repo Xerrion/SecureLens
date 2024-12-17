@@ -15,14 +15,14 @@ internal class Program
 {
     private static async Task Main(string[] args)
     {
-        // Byg konfiguration
+        // Build configuration
         IConfigurationRoot? configuration = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
             .AddJsonFile("config/appsettings.json", false, true)
             .AddJsonFile("config/adminbyrequestsettings.json", false, true)
             .Build();
 
-        // Opsæt DI
+        // Setup Dependency Injection (DI)
         ServiceProvider? serviceProvider = new ServiceCollection()
             .AddSingleton<IConfiguration>(configuration)
             .AddSingleton<ILogger, ConsoleLogger>()
@@ -44,7 +44,7 @@ internal class Program
             .AddSingleton<ApplicationRunner>()
             .BuildServiceProvider();
 
-        // Resolve ApplicationRunner og kør
+        // Resolve ApplicationRunner and execute
         ApplicationRunner? runner = serviceProvider.GetService<ApplicationRunner>();
         if (runner != null)
             await runner.RunAsync();

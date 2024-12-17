@@ -9,16 +9,6 @@ namespace SecureLens.Utilities;
 /// </summary>
 public class HtmlReportWriter
 {
-    /// <summary>
-    /// Generates a single HTML document containing 
-    /// Overall Stats, App Stats, Terminal Stats, and Unused AD Groups.
-    /// </summary>
-    /// <param name="overallStats">OverallStatisticsResult from Analyzer</param>
-    /// <param name="appStats">Application statistics dictionary</param>
-    /// <param name="terminalStats">List of TerminalStatisticsRow</param>
-    /// <param name="unusedAdGroups">List of unused AD groups</param>
-    /// <param name="settings">AdminByRequestSettings list (to correlate columns or naming)</param>
-    /// <returns>An HTML string representing the entire report</returns>
     public string BuildHtmlReport(
         OverallStatisticsResult overallStats,
         Dictionary<string, ApplicationStatisticsResult> appStats,
@@ -27,7 +17,6 @@ public class HtmlReportWriter
         List<AdminByRequestSetting> settings
     )
     {
-        // Use a StringBuilder to build your HTML document:
         var sb = new StringBuilder();
 
         sb.AppendLine("<!DOCTYPE html>");
@@ -35,7 +24,7 @@ public class HtmlReportWriter
         sb.AppendLine("<head>");
         sb.AppendLine("  <meta charset='UTF-8'>");
         sb.AppendLine("  <title>SecureLens Report</title>");
-        // Basic styling - you can add more advanced styling if you want
+        // Basic styling
         sb.AppendLine("  <style>");
         sb.AppendLine("    body { font-family: Arial, sans-serif; margin: 20px; }");
         sb.AppendLine("    h1, h2 { color: #2F4F4F; }");
