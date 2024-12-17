@@ -24,7 +24,7 @@ public static class RepositoryFactory
 
             var repo = new ActiveDirectoryRepository(logger, cachedStrategy);
 
-            // Indlæs cache data
+            // Load cache data
             if (!string.IsNullOrEmpty(groupCacheFilePath)) repo.LoadGroupDataFromFile(groupCacheFilePath);
 
             if (!string.IsNullOrEmpty(userCacheFilePath)) repo.LoadUserDataFromFile(userCacheFilePath);
@@ -52,7 +52,7 @@ public static class RepositoryFactory
 
             var repo = new AdminByRequestRepository(apiKey, logger, cachedStrategy);
 
-            // Indlæs cache data
+            // Load cache data
             if (!string.IsNullOrEmpty(cachedInventoryPath)) repo.LoadCachedInventoryData(cachedInventoryPath);
 
             if (!string.IsNullOrEmpty(cachedAuditLogsPath)) repo.LoadCachedAuditLogs(cachedAuditLogsPath);
