@@ -16,6 +16,7 @@ namespace SecureLens.Tests.Infrastructure.Factories
         {
             // Arrange
             var loggerMock = new Mock<ILogger>();
+            // snyk:ignore hardcoded-credentials
             string apiKey = "testapikey";
             bool useLiveData = false;
             string inventoryPath = "inventory_cache.json";
@@ -41,6 +42,7 @@ namespace SecureLens.Tests.Infrastructure.Factories
         {
             // Arrange
             var loggerMock = new Mock<ILogger>();
+            // snyk:ignore hardcoded-credentials
             string apiKey = "testapikey";
             bool useLiveData = true;
 
