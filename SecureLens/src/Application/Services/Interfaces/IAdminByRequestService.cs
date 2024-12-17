@@ -2,5 +2,5 @@
 
 public interface IAdminByRequestService
 {
-    void CreateSetting(string name, List<string> groups);
+    public void CreateSetting(string name, List<string> groups);
 }

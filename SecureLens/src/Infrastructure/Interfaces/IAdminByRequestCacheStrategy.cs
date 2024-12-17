@@ -1,10 +1,9 @@
 ﻿using SecureLens.Core.Models;
 
-namespace SecureLens.Infrastructure.Interfaces
+namespace SecureLens.Infrastructure.Interfaces;
+
+public interface IAdminByRequestCacheStrategy : IAdminByRequestStrategy
 {
-    public interface IAdminByRequestCacheStrategy : IAdminByRequestStrategy
-    {
-        List<InventoryLogEntry> LoadCachedInventoryData(string filePath);
-        List<AuditLogEntry> LoadCachedAuditLogs(string filePath);
-    }
+    public List<InventoryLogEntry> LoadCachedInventoryData(string filePath);
+    public List<AuditLogEntry> LoadCachedAuditLogs(string filePath);
 }

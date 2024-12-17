@@ -1,47 +1,47 @@
 ﻿using System.Text.Json;
 using SecureLens.Infrastructure.Logging;
 
-namespace SecureLens.Infrastructure.Data
+namespace SecureLens.Infrastructure.Data;
+
+public abstract class BaseRepository
 {
-    public abstract class BaseRepository
+    protected readonly ILogger Logger;
+
+    protected BaseRepository(ILogger logger)
     {
-        protected readonly ILogger Logger;
+        Logger = logger;
+    }
 
-        protected BaseRepository(ILogger logger)
+    protected void LogError(Exception ex, string contextMessage)
+    {
+        Logger.LogError($"{contextMessage}: {ex.Message}");
+    }
+
+    // Evt. fælles File-check/logik:
+    protected bool FileExistsOrWarn(string filePath)
+    {
+        if (!File.Exists(filePath))
         {
-            Logger = logger;
+            Logger.LogError($"File not found: {filePath}");
+            return false;
         }
 
-        protected void LogError(Exception ex, string contextMessage)
-        {
-            Logger.LogError($"{contextMessage}: {ex.Message}");
-        }
+        return true;
+    }
 
-        // Evt. fælles File-check/logik:
-        protected bool FileExistsOrWarn(string filePath)
+    // Evt. fælles logik til JSON-læsning:
+    protected T? LoadJsonFile<T>(string filePath)
+    {
+        try
         {
-            if (!File.Exists(filePath))
-            {
-                Logger.LogError($"File not found: {filePath}");
-                return false;
-            }
-            return true;
+            if (!FileExistsOrWarn(filePath)) return default;
+            var json = File.ReadAllText(filePath);
+            return JsonSerializer.Deserialize<T>(json);
         }
-
-        // Evt. fælles logik til JSON-læsning:
-        protected T? LoadJsonFile<T>(string filePath)
+        catch (Exception ex)
         {
-            try
-            {
-                if (!FileExistsOrWarn(filePath)) return default;
-                var json = File.ReadAllText(filePath);
-                return JsonSerializer.Deserialize<T>(json);
-            }
-            catch (Exception ex)
-            {
-                LogError(ex, $"Error loading JSON from {filePath}");
-                return default;
-            }
+            LogError(ex, $"Error loading JSON from {filePath}");
+            return default;
         }
     }
 }

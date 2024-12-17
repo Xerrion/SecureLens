@@ -9,51 +9,46 @@ using SecureLens.Core.Models;
 using SecureLens.Infrastructure.Factories;
 using SecureLens.Infrastructure.Logging;
 
-namespace SecureLens
+namespace SecureLens;
+
+internal class Program
 {
-    class Program
+    private static async Task Main(string[] args)
     {
-        static async Task Main(string[] args)
-        {
-            // Byg konfiguration
-            var configuration = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("config/appsettings.json", optional: false, reloadOnChange: true)
-                .AddJsonFile("config/adminbyrequestsettings.json", optional: false, reloadOnChange: true)
-                .Build();
+        // Byg konfiguration
+        IConfigurationRoot? configuration = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("config/appsettings.json", false, true)
+            .AddJsonFile("config/adminbyrequestsettings.json", false, true)
+            .Build();
 
-            // Opsæt DI
-            var serviceProvider = new ServiceCollection()
-                .AddSingleton<IConfiguration>(configuration)
-                .AddSingleton<ILogger, ConsoleLogger>()
-                .AddSingleton<UserInterface>()
-                .AddSingleton<SettingsManager>()
-                .AddSingleton<List<AdminByRequestSetting>>(sp =>
-                {
-                    var settingsManager = sp.GetRequiredService<SettingsManager>();
-                    return settingsManager.InitializeSettings();
-                })
-                .AddTransient<IOverallStatisticsCalculator, OverallStatisticsCalculator>()
-                .AddTransient<IApplicationStatisticsCalculator, ApplicationStatisticsCalculator>()
-                .AddTransient<ITerminalStatisticsCalculator, TerminalStatisticsCalculator>()
-                .AddTransient<IUnusedAdGroupsCalculator, UnusedAdGroupsCalculator>()
-                .AddTransient<Analyzer>() 
-                .AddTransient<CacheModeHandler>()
-                .AddTransient<OnlineModeHandler>()
-                .AddSingleton<ModeHandlerFactory>()
-                .AddSingleton<ApplicationRunner>()
-                .BuildServiceProvider();
+        // Opsæt DI
+        ServiceProvider? serviceProvider = new ServiceCollection()
+            .AddSingleton<IConfiguration>(configuration)
+            .AddSingleton<ILogger, ConsoleLogger>()
+            .AddSingleton<UserInterface>()
+            .AddSingleton<SettingsManager>()
+            .AddSingleton<List<AdminByRequestSetting>>(sp =>
+            {
+                SettingsManager? settingsManager = sp.GetRequiredService<SettingsManager>();
+                return settingsManager.InitializeSettings();
+            })
+            .AddTransient<IOverallStatisticsCalculator, OverallStatisticsCalculator>()
+            .AddTransient<IApplicationStatisticsCalculator, ApplicationStatisticsCalculator>()
+            .AddTransient<ITerminalStatisticsCalculator, TerminalStatisticsCalculator>()
+            .AddTransient<IUnusedAdGroupsCalculator, UnusedAdGroupsCalculator>()
+            .AddTransient<Analyzer>()
+            .AddTransient<CacheModeHandler>()
+            .AddTransient<OnlineModeHandler>()
+            .AddSingleton<ModeHandlerFactory>()
+            .AddSingleton<ApplicationRunner>()
+            .BuildServiceProvider();
 
-            // Resolve ApplicationRunner og kør
-            var runner = serviceProvider.GetService<ApplicationRunner>();
-            if (runner != null)
-            {
-                await runner.RunAsync();
-            }
-            else
-            {
-                Console.WriteLine("Failed to start the application.");
-            }
-        }
+        // Resolve ApplicationRunner og kør
+        ApplicationRunner? runner = serviceProvider.GetService<ApplicationRunner>();
+        if (runner != null)
+            await runner.RunAsync();
+        else
+            Console.WriteLine("Failed to start the application.");
     }
 }

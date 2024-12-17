@@ -2,22 +2,43 @@
   "AdminByRequestSettings": [
     {
       "Name": "Technology",
-      "ActiveDirectoryGroups": ["Technology"]
+      "ActiveDirectoryGroups": [
+        "Technology"
+      ]
     },
     {
       "Name": "Elevate Terminal Rights",
       "ActiveDirectoryGroups": [
-        "Technology", "Servicedesk", "Tooling", "Cloud Developer", "Infrastructure",
-        "Production Support", "Cloud Admin", "Content Technology", "Data Science",
-        "Developers", "Access Management", "Ad & Sales", "Business Services",
-        "Content Metadata", "Management", "Entertainment", "Economics", "Finance"
+        "Technology",
+        "Servicedesk",
+        "Tooling",
+        "Cloud Developer",
+        "Infrastructure",
+        "Production Support",
+        "Cloud Admin",
+        "Content Technology",
+        "Data Science",
+        "Developers",
+        "Access Management",
+        "Ad & Sales",
+        "Business Services",
+        "Content Metadata",
+        "Management",
+        "Entertainment",
+        "Economics",
+        "Finance"
       ]
     },
     {
       "Name": "Global",
       "ActiveDirectoryGroups": [
-        "Journalism", "Sport", "Graphical Designer", "Advertisement",
-        "HR", "Legal", "Marketing"
+        "Journalism",
+        "Sport",
+        "Graphical Designer",
+        "Advertisement",
+        "HR",
+        "Legal",
+        "Marketing"
       ]
     }
   ]
