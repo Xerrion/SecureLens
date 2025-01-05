@@ -139,7 +139,7 @@ dotnet build
         "Inventory": "../../../../MockData/cached_inventory.json",
         "AuditLogs": "../../../../MockData/cached_auditlogs.json"
       },
-      "ReportPath": "C:\\Users\\jeppe\\Desktop\\report.html",
+      "ReportPath": "C:\\report.html",
       "KnownTerminalApps": [
         "cmd.exe",
         "PowerShell",
