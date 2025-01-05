@@ -79,11 +79,11 @@ dotnet restore
 dotnet build
 ```
 
-Configuration
-
+### Configuration
     config/adminbyrequestsettings.json
-    Defines the AdminByRequest settings and the AD groups associated with each setting:
 
+    Defines the AdminByRequest settings and the AD groups associated with each setting:
+```markdown
 {
   "AdminByRequestSettings": [
     {
@@ -127,6 +127,7 @@ Configuration
     }
   ]
 }
+```
 
 config/appsettings.json
 Defines file paths for caching, known terminal applications, and the HTML report output path:
