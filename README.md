@@ -80,10 +80,10 @@ dotnet build
 ```
 
 ### Configuration
-    **config/adminbyrequestsettings.json**
-
+  - **config/adminbyrequestsettings.json**
     Defines the AdminByRequest settings and the AD groups associated with each setting:
-```markdown
+  
+```bash
 {
   "AdminByRequestSettings": [
     {
@@ -130,8 +130,8 @@ dotnet build
 ```
 
 **config/appsettings.json**
-Defines file paths for caching, known terminal applications, and the HTML report output path:
-
+- Defines file paths for caching, known terminal applications, and the HTML report output path:
+```
     {
       "CachePaths": {
         "GroupCache": "../../../../MockData/cached_adgroup_queries.json",
@@ -149,6 +149,7 @@ Defines file paths for caching, known terminal applications, and the HTML report
         "git for windows"
       ]
     }
+```
 
 Adjust these paths and values to match your local environment.
 
@@ -160,7 +161,7 @@ cd SecureLens
 dotnet run --project .\SecureLens.csproj
 ```
 
-You will be prompted to select a mode:
+- You will be prompted to select a mode:
 
     Cache Mode
         Loads local JSON files containing AD group/user data, inventory, and audit logs.
@@ -173,7 +174,7 @@ You will be prompted to select a mode:
 
 ### Cache Mode
 
-When you choose cache mode, CacheModeHandler will:
+- When you choose cache mode, CacheModeHandler will:
 
     Load your local JSON files specified by CachePaths in appsettings.json.
     Build a list of CompletedUser objects correlating Audit and Inventory data.
@@ -182,7 +183,7 @@ When you choose cache mode, CacheModeHandler will:
 
 ### Online Mode
 
-When you choose online mode, OnlineModeHandler will:
+- When you choose online mode, OnlineModeHandler will:
 
     Prompt you for an AdminByRequest API Key (masked during entry).
     Make live API requests to fetch Inventory (FetchInventoryDataAsync()) and Audit logs (FetchAuditLogsAsync()).
@@ -191,7 +192,7 @@ When you choose online mode, OnlineModeHandler will:
 
 ### Generated HTML Report
 
-Regardless of the mode, SecureLens produces an HTML report providing:
+- Regardless of the mode, SecureLens produces an HTML report providing:
 
     Overall Statistics
         Total unique users, total unique workstations, membership counts per AdminByRequest setting, etc.
