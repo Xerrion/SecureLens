@@ -171,7 +171,7 @@ You will be prompted to select a mode:
         Queries AD in real-time (if configured for live AD lookups).
         Requires an API key to authenticate with AdminByRequest.
 
-Cache Mode
+### Cache Mode
 
 When you choose cache mode, CacheModeHandler will:
 
@@ -180,7 +180,7 @@ When you choose cache mode, CacheModeHandler will:
     Optionally load AD user and group caches from JSON.
     Run the analyzers and generate the HTML report at ReportPath.
 
-Online Mode
+### Online Mode
 
 When you choose online mode, OnlineModeHandler will:
 
@@ -189,7 +189,7 @@ When you choose online mode, OnlineModeHandler will:
     Query Active Directory in real time (if running on Windows with AD modules).
     Run the analyzers and generate the HTML report at ReportPath.
 
-Generated HTML Report
+### Generated HTML Report
 
 Regardless of the mode, SecureLens produces an HTML report providing:
 
@@ -204,7 +204,7 @@ Regardless of the mode, SecureLens produces an HTML report providing:
 
 You can find this report at the path specified in appsettings.json (e.g., ReportPath).
 
-Contributing
+## Contributing
 
     Fork the repository.
     Create your feature branch (git checkout -b feature/my-new-feature).
