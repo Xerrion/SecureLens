@@ -80,7 +80,7 @@ dotnet build
 ```
 
 ### Configuration
-    config/adminbyrequestsettings.json
+    **config/adminbyrequestsettings.json**
 
     Defines the AdminByRequest settings and the AD groups associated with each setting:
 ```markdown
@@ -129,7 +129,7 @@ dotnet build
 }
 ```
 
-config/appsettings.json
+**config/appsettings.json**
 Defines file paths for caching, known terminal applications, and the HTML report output path:
 
     {
@@ -152,12 +152,13 @@ Defines file paths for caching, known terminal applications, and the HTML report
 
 Adjust these paths and values to match your local environment.
 
-Usage
+## Usage
 
 After building the project, run the SecureLens console application from the terminal:
-
+```bash
 cd SecureLens
 dotnet run --project .\SecureLens.csproj
+```
 
 You will be prompted to select a mode:
 
