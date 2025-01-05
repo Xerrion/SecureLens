@@ -1,13 +1,13 @@
 ﻿{
   "AdminByRequestSettings": [
     {
-      "Name": "Technology",
+      "Name": "Advanced Technology",
       "ActiveDirectoryGroups": [
         "Technology"
       ]
     },
     {
-      "Name": "Elevate Terminal Rights",
+      "Name": "Mixed Infrastructure",
       "ActiveDirectoryGroups": [
         "Technology",
         "Servicedesk",
