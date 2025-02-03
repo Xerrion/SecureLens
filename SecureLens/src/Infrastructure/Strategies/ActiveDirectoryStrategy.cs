@@ -19,12 +19,12 @@ public class ActiveDirectoryStrategy : IActiveDirectoryStrategy
         try
         {
             var cmd =
-                $@"Get-ADGroupMember -Identity ""{groupName}"" -Recursive | Select-Object -ExpandProperty SamAccountName";
+                $"Get-ADGroupMember -Identity \"{groupName}\" -Recursive | Select-Object -ExpandProperty SamAccountName";
 
             var psi = new ProcessStartInfo
             {
                 FileName = "powershell",
-                Arguments = "-NoProfile -Command \"" + cmd + "\"",
+                Arguments = $"-NoProfile -Command \"{cmd}\"",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
