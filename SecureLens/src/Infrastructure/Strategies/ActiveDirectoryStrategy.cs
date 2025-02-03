@@ -5,21 +5,14 @@ using SecureLens.Infrastructure.Logging;
 
 namespace SecureLens.Infrastructure.Strategies;
 
-public class ActiveDirectoryStrategy : IActiveDirectoryStrategy
+public class ActiveDirectoryStrategy(ILogger logger) : IActiveDirectoryStrategy
 {
-    private readonly ILogger _logger;
-
-    public ActiveDirectoryStrategy(ILogger logger)
-    {
-        _logger = logger;
-    }
-
     public List<string> QueryAdGroup(string groupName)
     {
         try
         {
             var cmd =
-                $"Get-ADGroupMember -Identity \"{groupName}\" -Recursive | Select-Object -ExpandProperty SamAccountName";
+                $"Get-ADGroupMember -Identity '{groupName}' -Recursive | Select-Object -ExpandProperty SamAccountName";
 
             var psi = new ProcessStartInfo
             {
@@ -49,15 +42,15 @@ public class ActiveDirectoryStrategy : IActiveDirectoryStrategy
             {
                 var errorMsg = stderr.Trim();
                 if (errorMsg.Contains("Cannot find an object with identity", StringComparison.OrdinalIgnoreCase))
-                    _logger.LogWarning($"AD group '{groupName}' not found in AD.");
+                    logger.LogWarning($"AD group '{groupName}' not found in AD.");
                 else
-                    _logger.LogError($"Failed to get AD group details for '{groupName}'. Error: {errorMsg}");
+                    logger.LogError($"Failed to get AD group details for '{groupName}'. Error: {errorMsg}");
                 return new List<string>();
             }
         }
         catch (Exception e)
         {
-            _logger.LogError($"Error querying AD group '{groupName}': {e}");
+            logger.LogError($"Error querying AD group '{groupName}': {e}");
             return new List<string>();
         }
     }
@@ -74,7 +67,7 @@ public class ActiveDirectoryStrategy : IActiveDirectoryStrategy
             foreach (var m in members) allMembers.Add(m);
         }
 
-        if (groupsNotFound > 0) _logger.LogWarning($"{groupsNotFound} groups not found or had errors.");
+        if (groupsNotFound > 0) logger.LogWarning($"{groupsNotFound} groups not found or had errors.");
         return allMembers;
     }
 }
