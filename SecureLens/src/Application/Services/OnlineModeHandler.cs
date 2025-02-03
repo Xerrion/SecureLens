@@ -73,9 +73,9 @@ public class OnlineModeHandler : IModeHandler
         _logger.LogInfo("=== Audit Logs ===");
         Dictionary<string, string> auditParams = new()
         {
-            { "take", "1000" }, // Adjust as needed
+            { "take", "5000" }, // Adjust as needed
             { "wantscandetails", "1" },
-            { "startdate", "2023-01-01" },
+            { "startdate", "2024-01-01" },
             { "enddate", "2025-12-31" },
             { "status", "Finished" },
             { "type", "app" }
