@@ -14,10 +14,8 @@ public static class ApiKeyValidator
     /// </summary>
     /// <param name="apiKey">API-key string</param>
     /// <returns>True if valid - else false</returns>
-    public static bool IsValid(string apiKey)
+    public static bool IsValid(string? apiKey)
     {
-        if (string.IsNullOrEmpty(apiKey)) return false;
-
-        return ApiKeyPattern.IsMatch(apiKey);
+        return !string.IsNullOrEmpty(apiKey) && ApiKeyPattern.IsMatch(apiKey);
     }
 }

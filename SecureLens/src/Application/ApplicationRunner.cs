@@ -45,9 +45,11 @@ public class ApplicationRunner
             _logger.LogInfo("You have chosen 'online' mode.");
 
             var apiKey = _ui.GetApiKey();
-
-            IModeHandler? onlineHandler = _factory.CreateModeHandler("online", apiKey);
-            await onlineHandler.ExecuteAsync();
+            if (!string.IsNullOrEmpty(apiKey))
+            {
+                IModeHandler? onlineHandler = _factory.CreateModeHandler("online", apiKey);
+                await onlineHandler.ExecuteAsync();
+            }
         }
         else
         {
