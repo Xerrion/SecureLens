@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using System.Text;
 using SecureLens.Infrastructure.Interfaces;
 using SecureLens.Infrastructure.Logging;
 using SecureLens.Infrastructure.Utilities;
@@ -40,13 +39,13 @@ public class ActiveDirectoryStrategy(ILogger logger) : IActiveDirectoryStrategy
                     logger.LogWarning($"AD group '{groupName}' not found in AD.");
                 else
                     logger.LogError($"Failed to get AD group details for '{groupName}'. Error: {errorMsg}");
-                return new List<string>();
+                return [];
             }
         }
         catch (Exception e)
         {
             logger.LogError($"Error querying AD group '{groupName}': {e}");
-            return new List<string>();
+            return [];
         }
     }
 
