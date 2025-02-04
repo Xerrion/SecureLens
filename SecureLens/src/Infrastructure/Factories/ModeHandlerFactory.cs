@@ -4,29 +4,17 @@ using SecureLens.Application.Services.Interfaces;
 
 namespace SecureLens.Infrastructure.Factories;
 
-public class ModeHandlerFactory
+public class ModeHandlerFactory(IServiceProvider serviceProvider)
 {
-    private readonly IServiceProvider _serviceProvider;
-
-    public ModeHandlerFactory(IServiceProvider serviceProvider)
+    public IModeHandler CreateModeHandler(string mode, string apiKey = "")
     {
-        _serviceProvider = serviceProvider;
-    }
+        var apiKeyChars = apiKey.ToCharArray();
 
-    public IModeHandler CreateModeHandler(string mode, string? apiKey = "")
-    {
-        if (mode.Equals("cache", StringComparison.OrdinalIgnoreCase))
+        return mode.ToLower() switch 
         {
-            return _serviceProvider.GetRequiredService<CacheModeHandler>();
-        }
-
-        if (mode.Equals("online", StringComparison.OrdinalIgnoreCase))
-        {
-            // Convert the API key string to a char array
-            char[] apiKeyChars = apiKey.ToCharArray();
-            return ActivatorUtilities.CreateInstance<OnlineModeHandler>(_serviceProvider, apiKeyChars);
-        }
-
-        throw new ArgumentException("Invalid mode", nameof(mode));
+            "cache" => serviceProvider.GetRequiredService<CacheModeHandler>(),
+            "online" => ActivatorUtilities.CreateInstance<OnlineModeHandler>(serviceProvider, apiKeyChars),
+            _ => throw new ArgumentException("Invalid mode", nameof(mode))
+        };
     }
 }
