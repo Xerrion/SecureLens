@@ -2,6 +2,7 @@
 using System.Text;
 using SecureLens.Infrastructure.Interfaces;
 using SecureLens.Infrastructure.Logging;
+using SecureLens.Infrastructure.Utilities;
 
 namespace SecureLens.Infrastructure.Strategies;
 
@@ -12,25 +13,19 @@ public class ActiveDirectoryStrategy(ILogger logger) : IActiveDirectoryStrategy
         try
         {
             var cmd =
-                $"Get-ADGroupMember -Identity '{groupName}' -Recursive | Select-Object -ExpandProperty SamAccountName";
+                $"Get-ADGroupMember -Identity \"{groupName}\" -Recursive | Select-Object -ExpandProperty SamAccountName";
 
-            var psi = new ProcessStartInfo
-            {
-                FileName = "powershell",
-                Arguments = $"-NoProfile -Command \"{cmd}\"",
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                StandardOutputEncoding = Encoding.UTF8
-            };
+            logger.LogInfo("Running command: " + cmd);
+
+            ProcessStartInfo psi = PowerShellHelper.CreatePowerShellProcessStartInfo(cmd);
 
             using var proc = new Process();
             proc.StartInfo = psi;
             proc.Start();
-
+            
             var stdout = proc.StandardOutput.ReadToEnd();
             var stderr = proc.StandardError.ReadToEnd();
+            
             proc.WaitForExit();
 
             if (!string.IsNullOrWhiteSpace(stdout))
